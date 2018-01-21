@@ -1,4 +1,5 @@
 #include "widget.h"
+
 #include <QDebug>
 
 Widget::Widget(QWidget *parent) :
@@ -6,7 +7,7 @@ Widget::Widget(QWidget *parent) :
 {
     m_pTcpSocket = new QTcpSocket(this);
 
-    m_pTcpSocket->connectToHost("localhost", 83); // !!!!!!!!!!!!!!!!
+    m_pTcpSocket->connectToHost("localhost", 8083); // !!!!!!!!!!!!!!!!
 
     connect(m_pTcpSocket, SIGNAL(connected()), SLOT(slotConnected()));
     connect(m_pTcpSocket, SIGNAL(readyRead()), SLOT(slotReadyRead()));
@@ -14,51 +15,41 @@ Widget::Widget(QWidget *parent) :
             this,         SLOT(slotError(QAbstractSocket::SocketError))
            );
 
-
-
-//    connect(pcmd, SIGNAL(clicked()), SLOT(slotSendToServer()));
-
-//tempate
-    data[0].begin = QTime(8,30);
-    data[0].end = QTime(9,15);
-
-    data[1].begin = QTime(9,30);
-    data[1].end = QTime(10,10);
-
-    data[2].begin = QTime(10,30);
-    data[2].end = QTime(11,10);
-
-    data[3].begin = QTime(11,30);
-    data[3].end = QTime(12,10);
-
-    data[4].begin = QTime(12,25);
-    data[4].end = QTime(13,5);
-
-    data[5].begin = QTime(13,15);
-    data[5].end = QTime(13,55);
-
-    data[6].begin = QTime(14,5);
-    data[6].end = QTime(14,45);
-
-//create table
-    createTables(sizeof(data) / sizeof(lesson) );
-
     pLayout = new QVBoxLayout;
     pLayout->setMargin(0);
-    pLayout->addWidget(pTable);
+
+
+//create table
+    createTables(0);
+
+    this->setStyleSheet("background-color:black; color: green; font-size: 24px; gridline-color: gray");
+
     this->setLayout(pLayout);
+    this->showFullScreen();
 }
 
 Widget::~Widget()
 {
 
 }
-
+void Widget::errorServerConnection()
+{
+    message.setText(tr("Error server connection!"));
+    message.setAlignment(Qt::AlignCenter);
+    pLayout->addWidget(&message);
+}
 void Widget::createTables(int numbersOfLessons)
 {
-
+    if(numbersOfLessons == 0)
+    {
+        errorServerConnection();
+        return;
+    }
+    qDebug() << "createTables";
     int rows = numbersOfLessons + 1;
 
+    if(pTable != 0)
+        delete pTable;
     pTable = new QTableWidget(rows,3);
 
 //creating tables
@@ -75,16 +66,13 @@ void Widget::createTables(int numbersOfLessons)
     for (int column = 0; column < 3; column++)
         for (int row = 1; row < numbersOfLessons+1; row++){
             if(column==1)
-                pTable->item(row, column)->setText(data[row-1].begin.toString("hh:mm"));
+                pTable->item(row, column)->setText(pDoubleArray[0][row-1].begin);
             if(column==2)
-                pTable->item(row, column)->setText(data[row-1].end.toString("hh:mm"));
-
-            pTable->item(row,column)->setBackground(Qt::black);
-            pTable->item(row,column)->setForeground(Qt::green);
+                pTable->item(row, column)->setText(pDoubleArray[0][row-1].end);
         }
 //set numbers for lessons
     for (int i = 1; i < rows; ++i)
-        pTable->item(i, 0)->setText(QString::number(i));
+        pTable->item(i, 0)->setText(QString::number(i-1));
 //set table's properties
     pTable->verticalHeader()->hide();
     pTable->horizontalHeader()->hide();
@@ -94,15 +82,7 @@ void Widget::createTables(int numbersOfLessons)
 //stretch
     for(int i = 0; i < rows; i++)
         pTable->verticalHeader()->setSectionResizeMode(i, QHeaderView::Stretch);
-//set color for all cells, size for text
-    QFont font = pTable->font();
-    font.setPixelSize(24);
-    pTable->setFont(font);
-    for (int column = 0; column < 3; column++)
-        for (int row = 0; row < numbersOfLessons+1; row++){
-            pTable->item(row,column)->setBackground(Qt::black);
-            pTable->item(row,column)->setForeground(Qt::green);
-        }
+
     pTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     pTable->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     pTable->setEditTriggers(0);
@@ -112,23 +92,71 @@ void Widget::slotReadyRead()
 {
     QDataStream in(m_pTcpSocket);
     in.setVersion(QDataStream::Qt_5_3);
-    for (;;) {
+
+//    quint16 blockSize;
+//    in >> blockSize;
+
+    if(pDoubleArray != 0)
+        for (int i = 0; i < 2; ++i)
+            delete []pDoubleArray[i];
+
+    pDoubleArray                = new lessonTime* [2];
+
+    for (int i = 0; i < 2; ++i) {
+        in >> isChangesEnabled[i];
+        qDebug() << "isChangesEnabled" << isChangesEnabled[i];
+
+        in >> numbersOfLessonInChange[i];
+        qDebug() << "numbersOfLessonInChange[" << i <<"]" << numbersOfLessonInChange[i];
+
+        pDoubleArray[i] = new lessonTime[numbersOfLessonInChange[i]];
+
+        for (int j = 0; j < numbersOfLessonInChange[i]; ++j) {
+            in >> pDoubleArray[i][j].begin \
+               >> pDoubleArray[i][j].end;
+            qDebug() << "pDoubleArray[i][j].begin - " << pDoubleArray[i][j].begin \
+                     << "pDoubleArray[i][j].end - " << pDoubleArray[i][j].end;
+
+        }
+    }
+
+    createTables(numbersOfLessonInChange[0]);
+    pLayout->addWidget(pTable);
+
+//    for (int i = 0; i < 2; ++i)
+//        for (int lessons = 0; lessons < numbersOfLessonInChange[i]; ++lessons)
+//            qDebug() << "Смена №" << i << isChangesEnabled[i] << " - " << pDoubleArray[i][lessons].begin << pDoubleArray[i][lessons].end << "урок " << pDoubleArray[i][lessons].isLessonEnabled;
+
+//    in >> numbersLessons;
+//    lesson data[(int)numbersLessons];
+
+//    for (int i = 0; i < (int)numbersLessons; ++i)
+//        in >> data[i].beginH >> data[i].beginM >> data[i].endH >> data[i].endM;
+
+//    for (int i = 0; i < (int)numbersLessons; ++i)
+//        qDebug() << data[i].beginH << data[i].beginM << data[i].endH << data[i].endM;
+
+/*    forever {
+        qDebug() << "test4";
         if (!m_nNextBlockSize) {
             if (m_pTcpSocket->bytesAvailable() < (int)sizeof(quint16)) {
                 break;
             }
             in >> m_nNextBlockSize;
         }
-
+        qDebug() << "test5";
         if (m_pTcpSocket->bytesAvailable() < m_nNextBlockSize) {
+            qDebug() << "test6";
             break;
         }
-        QTime   time;
-        QString str;
-        in >> time >> str;
+        qDebug() << "test7";
+        quint16 x;
+        in >> x;
+        qDebug() << "X= " << x;
 
         m_nNextBlockSize = 0;
     }
+    qDebug() << "test2"; */
 }
 void Widget::slotError(QAbstractSocket::SocketError err)
 {
