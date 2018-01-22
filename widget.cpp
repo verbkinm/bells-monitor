@@ -9,25 +9,31 @@ Widget::Widget(QWidget *parent) :
 
     m_pTcpSocket->connectToHost("localhost", 8083); // !!!!!!!!!!!!!!!!
 
-    connect(m_pTcpSocket, SIGNAL(connected()), SLOT(slotConnected()));
-    connect(m_pTcpSocket, SIGNAL(readyRead()), SLOT(slotReadyRead()));
-    connect(m_pTcpSocket, SIGNAL(error(QAbstractSocket::SocketError)),
-            this,         SLOT(slotError(QAbstractSocket::SocketError))
-           );
+    connect(m_pTcpSocket,       SIGNAL(connected()), SLOT(slotConnected()));
+    connect(m_pTcpSocket,       SIGNAL(readyRead()), SLOT(slotReadyRead()));
+    connect(m_pTcpSocket,       SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(slotError(QAbstractSocket::SocketError)) );
+
+    connect(&timerWait,         SIGNAL(timeout()), this, SLOT(slotTryReconnect()) );
+    connect(&timerCurrentTime,  SIGNAL(timeout()), this, SLOT(slotSetCurrentTime()));
 
     pLayout = new QVBoxLayout;
     pLayout->setMargin(0);
-
 
 //create table
     createTables(0);
 
     this->setStyleSheet("background-color:black; color: green; font-size: 24px; gridline-color: gray");
-
     this->setLayout(pLayout);
     this->showFullScreen();
 }
-
+void Widget::createClock()
+{
+    clock.setText(QTime::currentTime().toString("hh:mm:ss"));
+    clock.setAlignment(Qt::AlignCenter);
+    clock.setStyleSheet("font-size: 64px;");
+    timerCurrentTime.start(1000);
+    pLayout->addWidget(&clock);
+}
 Widget::~Widget()
 {
 
@@ -36,20 +42,23 @@ void Widget::errorServerConnection()
 {
     message.setText(tr("Error server connection!"));
     message.setAlignment(Qt::AlignCenter);
+    message.setStyleSheet("font-size: 44px;");
     pLayout->addWidget(&message);
+    createClock();
+
 }
 void Widget::createTables(int numbersOfLessons)
 {
+    deleteTable();
+
     if(numbersOfLessons == 0)
     {
         errorServerConnection();
         return;
     }
-    qDebug() << "createTables";
+
     int rows = numbersOfLessons + 1;
 
-    if(pTable != 0)
-        delete pTable;
     pTable = new QTableWidget(rows,3);
 
 //creating tables
@@ -103,25 +112,17 @@ void Widget::slotReadyRead()
     pDoubleArray                = new lessonTime* [2];
 
     for (int i = 0; i < 2; ++i) {
-        in >> isChangesEnabled[i];
-        qDebug() << "isChangesEnabled" << isChangesEnabled[i];
-
-        in >> numbersOfLessonInChange[i];
-        qDebug() << "numbersOfLessonInChange[" << i <<"]" << numbersOfLessonInChange[i];
-
+        in >> isChangesEnabled[i] \
+           >> numbersOfLessonInChange[i];
         pDoubleArray[i] = new lessonTime[numbersOfLessonInChange[i]];
-
-        for (int j = 0; j < numbersOfLessonInChange[i]; ++j) {
-            in >> pDoubleArray[i][j].begin \
-               >> pDoubleArray[i][j].end;
-            qDebug() << "pDoubleArray[i][j].begin - " << pDoubleArray[i][j].begin \
-                     << "pDoubleArray[i][j].end - " << pDoubleArray[i][j].end;
-
-        }
+        for (int j = 0; j < numbersOfLessonInChange[i]; ++j)
+            in >> pDoubleArray[i][j].begin >> pDoubleArray[i][j].end;
     }
 
+    clear();
     createTables(numbersOfLessonInChange[0]);
     pLayout->addWidget(pTable);
+    createClock();
 
 //    for (int i = 0; i < 2; ++i)
 //        for (int lessons = 0; lessons < numbersOfLessonInChange[i]; ++lessons)
@@ -170,9 +171,13 @@ void Widget::slotError(QAbstractSocket::SocketError err)
                      QString(m_pTcpSocket->errorString())
                     );
     qDebug() << strError;
-}
 
-// ----------------------------------------------------------------------
+    clear();
+    errorServerConnection();
+
+    m_pTcpSocket->disconnectFromHost();
+    timerWait.start(10000);
+}
 void Widget::slotSendToServer()
 {
     QByteArray  arrBlock;
@@ -185,9 +190,36 @@ void Widget::slotSendToServer()
 
     m_pTcpSocket->write(arrBlock);
 }
-
-// ------------------------------------------------------------------
 void Widget::slotConnected()
 {
+    timerWait.stop();
     qDebug() << "Received the connected() signal";
+
+}
+void Widget::clear()
+{
+    deleteTable();
+    pLayout->removeWidget(&message);
+    pLayout->removeWidget(&clock);
+}
+void Widget::deleteTable()
+{
+    if(pTable != 0){
+        for (int column = 0; column < 3; column++){
+            for (int row = 0; row < pTable->rowCount(); row++){
+                delete pTable->item(row, column);
+            }
+        }
+        delete pTable;
+        pTable = 0;
+    }
+}
+void Widget::slotTryReconnect()
+{
+    timerWait.stop();
+    m_pTcpSocket->connectToHost("localhost", 8083);
+}
+void Widget::slotSetCurrentTime()
+{
+    clock.setText(QTime::currentTime().toString("hh:mm:ss"));
 }

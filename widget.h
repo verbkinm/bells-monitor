@@ -8,7 +8,7 @@
 #include <QTime>
 #include <QTcpSocket>
 #include <QLabel>
-
+#include <QTimer>
 
 class Widget;
 
@@ -28,10 +28,15 @@ private:
     QTcpSocket*                 m_pTcpSocket;
     quint16                     m_nNextBlockSize;
 
-    QLabel                      message;
+    QTimer                      timerWait, timerCurrentTime;
+    QLabel                      message, clock;
 
     void createTables           (int numbersOfLessons);
     void errorServerConnection  ();
+    void clear                  ();
+    void deleteTable            ();
+
+    void createClock            ();
 
 //****************************************************************************
 // contents protocol
@@ -61,6 +66,10 @@ private slots:
     void slotError              (QAbstractSocket::SocketError);
     void slotSendToServer       ();
     void slotConnected          ();
+
+    void slotTryReconnect       ();
+
+    void slotSetCurrentTime     ();
 };
 
 #endif // WIDGET_H
