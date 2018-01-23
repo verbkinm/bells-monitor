@@ -3,10 +3,18 @@
 #include <QDebug>
 #include <QDate>
 
-#define green "#006400"
+#define _green      "#006400"
+#define _black      "#000000"
+#define _white      "#ffffff"
+#define _lightgray  "#D3D3D3"
+#define _red        "#FF0000"
+
+#define _textSize   "48"
 
 BellsMonitor::BellsMonitor(QWidget *parent) :
-    QWidget(parent), textColor(green)
+    QWidget(parent), textColor(_black), backgroundColor(_white), \
+                     SelectTextColor(_red), SelectBackgroundColor(_lightgray), \
+                     textSize(_textSize)
 {
     m_pTcpSocket = new QTcpSocket(this);
 
@@ -18,7 +26,9 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
 
     connect(&timerWait,         SIGNAL(timeout()), this, SLOT(slotTryReconnect())   );
     connect(&timerCurrentTime,  SIGNAL(timeout()), this, SLOT(slotSetCurrentTime()) );
-    connect(&timerCheckInterval,SIGNAL(timeout()), this, SLOT(slotCheckInterval())  );
+    connect(&timerCheckInterval,SIGNAL(timeout()), this, SLOT(slotSelectCurrentLesson())  );
+    connect(&timerDefininBeginningAndEnd,SIGNAL(timeout()), this, SLOT(slotTimerDefininBeginningAndEnd())  );
+
 
     pLayout = new QVBoxLayout;
     pLayout->setMargin(10);
@@ -26,21 +36,27 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
 //create table
     createTables(0);
 
-    this->setStyleSheet(QString("background-color:black; color: ") \
-                        + textColor \
-                        +"; font-size: 48px; gridline-color: gray");
+    this->setStyleSheet(QString("background-color:" \
+                                + backgroundColor \
+                                + "; color: ") \
+                                + textColor \
+                                +"; font-size: " \
+                                + textSize \
+                                + "px; gridline-color: black");
     this->setLayout(pLayout);
     this->showFullScreen();
 }
 void BellsMonitor::createClock()
 {
-    clock.setText(firstPartClock \
+    clock.setText(firstPartClock\
+                  + secondPartClock \
+                  + "<br>" \
                   + QTime::currentTime().toString("hh:mm:ss") \
                   + "   " \
                   + QDate::currentDate().toString("dd-MM-yyyy"));
 
     clock.setAlignment(Qt::AlignCenter);
-    clock.setStyleSheet("font-size: 64px;");
+//    clock.setStyleSheet("font-size: 64px;");
     timerCurrentTime.start(200);
     pLayout->addWidget(&clock);
 }
@@ -54,8 +70,13 @@ void BellsMonitor::errorServerConnection()
     message.setAlignment(Qt::AlignCenter);
     message.setStyleSheet("font-size: 64px;");
     pLayout->addWidget(&message);
+
     createClock();
-    firstPartClock = "\0";
+
+    firstPartClock  = "\0";
+    secondPartClock = "\0";
+
+    isLessonNow = -1;
 }
 void BellsMonitor::createTables(int numbersOfLessons)
 {
@@ -107,11 +128,8 @@ void BellsMonitor::createTables(int numbersOfLessons)
     pTable->setEditTriggers(0);
     pTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-    firstPartClock = QString("Начало урока через ") \
-            + QString("<span style='color:red'>??</span>") \
-            + " мин.<br>";
-
-    timerCheckInterval.start(1000);
+    timerCheckInterval.start(200);
+    timerDefininBeginningAndEnd.start(1000);
 }
 void BellsMonitor::slotReadyRead()
 {
@@ -238,21 +256,38 @@ void BellsMonitor::slotTryReconnect()
 }
 void BellsMonitor::slotSetCurrentTime()
 {
-    clock.setText(firstPartClock \
+    if(isLessonNow == 1)
+        firstPartClock = "Урок заканчивается через ";
+    if(isLessonNow == 0)
+        firstPartClock = "Начало <span style='color:red'>" \
+                + QString::number(numberNextLesson) \
+                + QString("</span> урока через ");
+//    if( (isLessonNow == -1) || (numberNextLesson == -1))
+//        firstPartClock = "\0";
+
+    secondPartClock= QString("<span style='color:red'>" + secondPartClock + "</span>");
+
+    clock.setText(firstPartClock\
+                  + secondPartClock \
+                  + "<br>" \
                   + QTime::currentTime().toString("hh:mm:ss") \
                   + "   " \
                   + QDate::currentDate().toString("dd-MM-yyyy"));
 }
-void BellsMonitor::slotCheckInterval()
+void BellsMonitor::slotSelectCurrentLesson()
 {
     QTime currentTime(QTime::currentTime());
     QTime begin, end;
+
     int hourBegin, minuteBegin, hourEnd, minuteEnd;
+    int hourBeginNextLesson, minuteBeginNextLesson,
+            hourEndNextLesson, minutEndNextLesson;
+    int begin_this_lesson, end_this_lesson, begin_next_lesson;
 
     if(pTable != 0)
     {
+        isLessonNow = 0;
         for (int i = 0; i < numbersOfLessonInChange[0]; ++i) {
-
             if(pDoubleArray[0][i].begin == "-- : --")
                 continue;
 
@@ -261,25 +296,81 @@ void BellsMonitor::slotCheckInterval()
             hourEnd     = ((pDoubleArray[0][i].end).split(":")[0]).toInt();
             minuteEnd   = ((pDoubleArray[0][i].end).split(":")[1]).toInt();
 
+            if( (i+1) < numbersOfLessonInChange[0] ){
+                hourBeginNextLesson     = ((pDoubleArray[0][i + 1].begin).split(":")[0]).toInt();
+                minuteBeginNextLesson   = ((pDoubleArray[0][i + 1].begin).split(":")[1]).toInt();
+                hourEndNextLesson       = ((pDoubleArray[0][i + 1].end).split(":")[0]).toInt();
+                minutEndNextLesson      = ((pDoubleArray[0][i + 1].end).split(":")[1]).toInt();
+
+                begin_next_lesson       = hourBeginNextLesson * 3600 + minuteBeginNextLesson * 60;
+            }
+
             begin.setHMS(hourBegin, minuteBegin,0);
             end.setHMS  (hourEnd,   minuteEnd,  0);
 
             if( (begin < currentTime) && (currentTime < end)){
-                pTable->item(i + 1, 0)->setBackgroundColor(QColor(Qt::lightGray));
-                pTable->item(i + 1, 0)->setTextColor(QColor(Qt::blue));
-                pTable->item(i + 1, 1)->setBackgroundColor(QColor(Qt::lightGray));
-                pTable->item(i + 1, 1)->setTextColor(QColor(Qt::blue));
-                pTable->item(i + 1, 2)->setBackgroundColor(QColor(Qt::lightGray));
-                pTable->item(i + 1, 2)->setTextColor(QColor(Qt::blue));
+                pTable->item(i + 1, 0)->setBackgroundColor(QColor(SelectBackgroundColor));
+                pTable->item(i + 1, 0)->setTextColor(QColor(SelectTextColor));
+                pTable->item(i + 1, 1)->setBackgroundColor(QColor(SelectBackgroundColor));
+                pTable->item(i + 1, 1)->setTextColor(QColor(SelectTextColor));
+                pTable->item(i + 1, 2)->setBackgroundColor(QColor(SelectBackgroundColor));
+                pTable->item(i + 1, 2)->setTextColor(QColor(SelectTextColor));
+
+                isLessonNow         = 1;
+                numberCurrentLesson = i;
+
+                if( (i>0) && (i<numbersOfLessonInChange[0]-1) ){
+                    numberPreviousLesson= i - 1;
+                    numberNextLesson    = i + 1;
+                }
+
+                end_this_lesson     = (hourEnd * 3600 + minuteEnd * 60);
+
+                secondPartClock     = restTime( end_this_lesson, currentTime );
             }
             else{
-                pTable->item(i + 1, 0)->setBackgroundColor(QColor(Qt::black));
+                pTable->item(i + 1, 0)->setBackgroundColor(QColor(backgroundColor));
                 pTable->item(i + 1, 0)->setTextColor(QColor(textColor));
-                pTable->item(i + 1, 1)->setBackgroundColor(QColor(Qt::black));
+                pTable->item(i + 1, 1)->setBackgroundColor(QColor(backgroundColor));
                 pTable->item(i + 1, 1)->setTextColor(QColor(textColor));
-                pTable->item(i + 1, 2)->setBackgroundColor(QColor(Qt::black));
+                pTable->item(i + 1, 2)->setBackgroundColor(QColor(backgroundColor));
                 pTable->item(i + 1, 2)->setTextColor(QColor(textColor));
+
+                secondPartClock     = restTime( begin_next_lesson, currentTime );
+//                numberNextLesson    =
+
             }
         }
     }
+}
+QString BellsMonitor::restTime(int timeInSec, QTime currentTime)
+{
+    int seconds;
+    int M, S;
+
+    seconds = timeInSec - (currentTime.hour()*3600 + currentTime.minute()*60 + currentTime.second());
+    if(seconds < 0){
+        return "ДО ЗАВТРА";
+    }
+//        seconds += 86400;
+
+    M = (seconds / 60);
+    S = (seconds - (M * 60) );
+
+    return QString::number(M) + " мин. " + QString::number(S) + " сек.";
+}
+void BellsMonitor::slotTimerDefininBeginningAndEnd()
+{
+
+}
+void BellsMonitor::setLessonNow()
+{
+//    if(isLessonNow)
+//        firstPartClock = "Урок заканчивается через ";
+//    else
+//        firstPartClock = "Начало урока через ";
+
+
+//    secondPartClock= "<span style='color:red'>??</span>";
+//    thirdPartClock = " мин.<br>";
 }

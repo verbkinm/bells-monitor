@@ -27,12 +27,21 @@ private:
     QTcpSocket*                 m_pTcpSocket;
     quint16                     m_nNextBlockSize;
 
-    QTimer                      timerWait, timerCurrentTime, timerCheckInterval;
+    QTimer                      timerWait, timerCurrentTime, timerCheckInterval, timerDefininBeginningAndEnd;
     QLabel                      message, clock;
 
-    QString                     firstPartClock = 0;
+    int                         isLessonNow = -1;
 
-    QString                     textColor;
+    int                         numberCurrentLesson  = -1;
+    int                         numberPreviousLesson = -1;
+    int                         numberNextLesson     = -1;
+
+                            //Начало урока через         n             мин.(сек.)      дата и время
+    QString                     firstPartClock,                     secondPartClock;
+
+    QString                     textColor, backgroundColor;
+    QString                     SelectTextColor, SelectBackgroundColor;
+    QString                     textSize;
 
     void createTables           (int numbersOfLessons);
     void errorServerConnection  ();
@@ -40,6 +49,10 @@ private:
     void deleteTable            ();
 
     void createClock            ();
+
+    void setLessonNow           ();
+
+    QString restTime            (int timeInSec, QTime currentTime);
 
 //****************************************************************************
 // contents protocol
@@ -66,15 +79,16 @@ private:
     lessonTime**                pDoubleArray = 0;
 
 private slots:
-    void slotReadyRead          ();
-    void slotError              (QAbstractSocket::SocketError);
-    void slotSendToServer       ();
-    void slotConnected          ();
+    void slotReadyRead                      ();
+    void slotError                          (QAbstractSocket::SocketError);
+    void slotSendToServer                   ();
+    void slotConnected                      ();
 
-    void slotTryReconnect       ();
+    void slotTryReconnect                   ();
 
-    void slotSetCurrentTime     ();
-    void slotCheckInterval      ();
+    void slotSetCurrentTime                 ();
+    void slotSelectCurrentLesson            ();
+    void slotTimerDefininBeginningAndEnd    ();
 };
 
 #endif // BELLSMONITOR_H
