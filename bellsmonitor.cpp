@@ -11,6 +11,8 @@
 
 #define _textSize   "48"
 
+#define dash        "-- : --"
+
 BellsMonitor::BellsMonitor(QWidget *parent) :
     QWidget(parent), textColor(_black), backgroundColor(_white), \
                      SelectTextColor(_red), SelectBackgroundColor(_lightgray), \
@@ -26,7 +28,7 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
 
     connect(&timerWait,         SIGNAL(timeout()), this, SLOT(slotTryReconnect())   );
     connect(&timerCurrentTime,  SIGNAL(timeout()), this, SLOT(slotSetCurrentTime()) );
-    connect(&timerCheckInterval,SIGNAL(timeout()), this, SLOT(slotSelectCurrentLesson())  );
+//    connect(&timerCheckInterval,SIGNAL(timeout()), this, SLOT(slotSelectCurrentLesson())  );
     connect(&timerDefininBeginningAndEnd,SIGNAL(timeout()), this, SLOT(slotTimerDefininBeginningAndEnd())  );
 
 
@@ -128,70 +130,88 @@ void BellsMonitor::createTables(int numbersOfLessons)
     pTable->setEditTriggers(0);
     pTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-    timerCheckInterval.start(200);
-    timerDefininBeginningAndEnd.start(1000);
+//    timerCheckInterval.start(200);
+//    timerDefininBeginningAndEnd.start(1000);
+
+    int currentTimeInSec = QTime::currentTime().hour() * 3600 \
+                           + QTime::currentTime().minute() * 60 \
+                           + QTime::currentTime().second();
+
+    slotSelectCurrentLesson(currentTimeInSec);
 }
 void BellsMonitor::slotReadyRead()
 {
     QDataStream in(m_pTcpSocket);
     in.setVersion(QDataStream::Qt_5_3);
 
-//    quint16 blockSize;
-//    in >> blockSize;
-
     if(pDoubleArray != 0)
         for (int i = 0; i < 2; ++i)
             delete []pDoubleArray[i];
 
-    pDoubleArray                = new lessonTime* [2];
+    pDoubleArray = new lessonTime* [2];
 
     for (int i = 0; i < 2; ++i) {
         in >> isChangesEnabled[i] \
            >> numbersOfLessonInChange[i];
+
         pDoubleArray[i] = new lessonTime[numbersOfLessonInChange[i]];
-        for (int j = 0; j < numbersOfLessonInChange[i]; ++j)
+
+        for (int j = 0; j < numbersOfLessonInChange[i]; ++j){
             in >> pDoubleArray[i][j].begin >> pDoubleArray[i][j].end;
+
+            QString begin   =  pDoubleArray[i][j].begin;
+            QString end     =  pDoubleArray[i][j].end;
+
+//установка переменной nextLessonBeginInSec
+            if( !(begin.startsWith(dash)) ) {
+                int hourBegin   = begin.split(":")[0].toInt();
+                int minutBegin  = begin.split(":")[1].toInt();
+
+                int hourEnd     = end.split(":")[0].toInt();
+                int minutEnd    = end.split(":")[1].toInt();
+
+                pDoubleArray[i][j].beginInSec = hourBegin * 3600 + minutBegin * 60;
+                pDoubleArray[i][j].endInSec = hourEnd * 3600 + minutEnd * 60;
+
+                if( j > 0){
+                        for (int ii = j-1; ii >= 0; --ii) {
+                            if(pDoubleArray[i][ii].begin.startsWith(dash))
+                                continue;
+                            if(pDoubleArray[i][ii].nextLessonBeginInSec == -1){
+                                pDoubleArray[i][ii].nextLessonBeginInSec = pDoubleArray[i][j].beginInSec;
+                                break;
+                            }
+                        }
+                }
+            }
+        }
     }
+// nextLessonBeginInSec для последнего активного урока - это beginInSec первого активного урока
+    for (int i = 0; i < 2; ++i){
+        for (int j = numbersOfLessonInChange[i]-1; j > 0; --j){
+            if(pDoubleArray[i][j].begin.startsWith(dash))
+                continue;
+            if(pDoubleArray[i][j].nextLessonBeginInSec == -1){
+                for (int ii = 0; ii < numbersOfLessonInChange[i]; ++ii) {
+                    if(pDoubleArray[i][ii].begin.startsWith(dash))
+                        continue;
+                    pDoubleArray[i][j].nextLessonBeginInSec = pDoubleArray[i][ii].beginInSec;
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+//    for (int i = 0; i < 2; ++i)
+//        for (int j = 0; j < numbersOfLessonInChange[i]; ++j){
+//            qDebug() << i << j << pDoubleArray[i][j].beginInSec <<pDoubleArray[i][j].endInSec << pDoubleArray[i][j].nextLessonBeginInSec;
+//    }
 
     clear();
     createTables(numbersOfLessonInChange[0]);
     pLayout->addWidget(pTable);
     createClock();
-
-//    for (int i = 0; i < 2; ++i)
-//        for (int lessons = 0; lessons < numbersOfLessonInChange[i]; ++lessons)
-//            qDebug() << "Смена №" << i << isChangesEnabled[i] << " - " << pDoubleArray[i][lessons].begin << pDoubleArray[i][lessons].end << "урок " << pDoubleArray[i][lessons].isLessonEnabled;
-
-//    in >> numbersLessons;
-//    lesson data[(int)numbersLessons];
-
-//    for (int i = 0; i < (int)numbersLessons; ++i)
-//        in >> data[i].beginH >> data[i].beginM >> data[i].endH >> data[i].endM;
-
-//    for (int i = 0; i < (int)numbersLessons; ++i)
-//        qDebug() << data[i].beginH << data[i].beginM << data[i].endH << data[i].endM;
-
-/*    forever {
-        qDebug() << "test4";
-        if (!m_nNextBlockSize) {
-            if (m_pTcpSocket->bytesAvailable() < (int)sizeof(quint16)) {
-                break;
-            }
-            in >> m_nNextBlockSize;
-        }
-        qDebug() << "test5";
-        if (m_pTcpSocket->bytesAvailable() < m_nNextBlockSize) {
-            qDebug() << "test6";
-            break;
-        }
-        qDebug() << "test7";
-        quint16 x;
-        in >> x;
-        qDebug() << "X= " << x;
-
-        m_nNextBlockSize = 0;
-    }
-    qDebug() << "test2"; */
 }
 void BellsMonitor::slotError(QAbstractSocket::SocketError err)
 {
@@ -210,7 +230,7 @@ void BellsMonitor::slotError(QAbstractSocket::SocketError err)
     errorServerConnection();
 
     m_pTcpSocket->disconnectFromHost();
-    timerWait.start(10000);
+    timerWait.start(1000);
 }
 void BellsMonitor::slotSendToServer()
 {
@@ -228,7 +248,6 @@ void BellsMonitor::slotConnected()
 {
     timerWait.stop();
     qDebug() << "Received the connected() signal";
-
 }
 void BellsMonitor::clear()
 {
@@ -256,16 +275,30 @@ void BellsMonitor::slotTryReconnect()
 }
 void BellsMonitor::slotSetCurrentTime()
 {
-    if(isLessonNow == 1)
+    int currentTimeInSec = QTime::currentTime().hour() * 3600 \
+                           + QTime::currentTime().minute() * 60 \
+                           + QTime::currentTime().second();
+    if(isLessonNow == 1){
         firstPartClock = "Урок заканчивается через ";
-    if(isLessonNow == 0)
+
+        secondPartClock = restTime(pDoubleArray[0][numberCurrentLesson].endInSec, currentTimeInSec);
+
+        if(pDoubleArray[0][numberCurrentLesson].endInSec <= currentTimeInSec)
+            slotSelectCurrentLesson(currentTimeInSec);
+    }
+    if(isLessonNow == 0){
         firstPartClock = "Начало <span style='color:red'>" \
                 + QString::number(numberNextLesson) \
                 + QString("</span> урока через ");
+        secondPartClock = restTime(pDoubleArray[0][numberNextLesson].beginInSec , currentTimeInSec);
+
+        if(pDoubleArray[0][numberCurrentLesson].beginInSec <= currentTimeInSec)
+            slotSelectCurrentLesson(currentTimeInSec);
+    }
 //    if( (isLessonNow == -1) || (numberNextLesson == -1))
 //        firstPartClock = "\0";
 
-    secondPartClock= QString("<span style='color:red'>" + secondPartClock + "</span>");
+    secondPartClock = QString("<span style='color:red'>" + secondPartClock + "</span>");
 
     clock.setText(firstPartClock\
                   + secondPartClock \
@@ -273,17 +306,11 @@ void BellsMonitor::slotSetCurrentTime()
                   + QTime::currentTime().toString("hh:mm:ss") \
                   + "   " \
                   + QDate::currentDate().toString("dd-MM-yyyy"));
+
+
 }
-void BellsMonitor::slotSelectCurrentLesson()
+void BellsMonitor::slotSelectCurrentLesson(int currentTimeInSec)
 {
-    QTime currentTime(QTime::currentTime());
-    QTime begin, end;
-
-    int hourBegin, minuteBegin, hourEnd, minuteEnd;
-    int hourBeginNextLesson, minuteBeginNextLesson,
-            hourEndNextLesson, minutEndNextLesson;
-    int begin_this_lesson, end_this_lesson, begin_next_lesson;
-
     if(pTable != 0)
     {
         isLessonNow = 0;
@@ -291,24 +318,7 @@ void BellsMonitor::slotSelectCurrentLesson()
             if(pDoubleArray[0][i].begin == "-- : --")
                 continue;
 
-            hourBegin   = ((pDoubleArray[0][i].begin).split(":")[0]).toInt();
-            minuteBegin = ((pDoubleArray[0][i].begin).split(":")[1]).toInt();
-            hourEnd     = ((pDoubleArray[0][i].end).split(":")[0]).toInt();
-            minuteEnd   = ((pDoubleArray[0][i].end).split(":")[1]).toInt();
-
-            if( (i+1) < numbersOfLessonInChange[0] ){
-                hourBeginNextLesson     = ((pDoubleArray[0][i + 1].begin).split(":")[0]).toInt();
-                minuteBeginNextLesson   = ((pDoubleArray[0][i + 1].begin).split(":")[1]).toInt();
-                hourEndNextLesson       = ((pDoubleArray[0][i + 1].end).split(":")[0]).toInt();
-                minutEndNextLesson      = ((pDoubleArray[0][i + 1].end).split(":")[1]).toInt();
-
-                begin_next_lesson       = hourBeginNextLesson * 3600 + minuteBeginNextLesson * 60;
-            }
-
-            begin.setHMS(hourBegin, minuteBegin,0);
-            end.setHMS  (hourEnd,   minuteEnd,  0);
-
-            if( (begin < currentTime) && (currentTime < end)){
+            if( (pDoubleArray[0][i].beginInSec < currentTimeInSec) && (currentTimeInSec < pDoubleArray[0][i].endInSec)){
                 pTable->item(i + 1, 0)->setBackgroundColor(QColor(SelectBackgroundColor));
                 pTable->item(i + 1, 0)->setTextColor(QColor(SelectTextColor));
                 pTable->item(i + 1, 1)->setBackgroundColor(QColor(SelectBackgroundColor));
@@ -319,14 +329,7 @@ void BellsMonitor::slotSelectCurrentLesson()
                 isLessonNow         = 1;
                 numberCurrentLesson = i;
 
-                if( (i>0) && (i<numbersOfLessonInChange[0]-1) ){
-                    numberPreviousLesson= i - 1;
-                    numberNextLesson    = i + 1;
-                }
-
-                end_this_lesson     = (hourEnd * 3600 + minuteEnd * 60);
-
-                secondPartClock     = restTime( end_this_lesson, currentTime );
+//                secondPartClock     = restTime( pDoubleArray[0][i].endInSec, currentTimeInSec );
             }
             else{
                 pTable->item(i + 1, 0)->setBackgroundColor(QColor(backgroundColor));
@@ -335,27 +338,36 @@ void BellsMonitor::slotSelectCurrentLesson()
                 pTable->item(i + 1, 1)->setTextColor(QColor(textColor));
                 pTable->item(i + 1, 2)->setBackgroundColor(QColor(backgroundColor));
                 pTable->item(i + 1, 2)->setTextColor(QColor(textColor));
-
-                secondPartClock     = restTime( begin_next_lesson, currentTime );
-//                numberNextLesson    =
-
+            }
+        }
+        if(isLessonNow == 0){
+            numberNextLesson = -1;
+            for (int i = 0; i < numbersOfLessonInChange[0]; ++i){
+                if(pDoubleArray[0][i].begin.startsWith(dash))
+                    continue;
+                if(currentTimeInSec < pDoubleArray[0][i].beginInSec){
+                    numberNextLesson = i;
+                    qDebug() << i;
+                    break;
+                }
             }
         }
     }
 }
-QString BellsMonitor::restTime(int timeInSec, QTime currentTime)
+QString BellsMonitor::restTime(int timeInSec, int currentTime)
 {
-    int seconds;
+    int result;
     int M, S;
 
-    seconds = timeInSec - (currentTime.hour()*3600 + currentTime.minute()*60 + currentTime.second());
-    if(seconds < 0){
-        return "ДО ЗАВТРА";
-    }
+    result = timeInSec - currentTime;
+//    if(result < 0){
+//        return "ДО ЗАВТРА";
+//    }
 //        seconds += 86400;
 
-    M = (seconds / 60);
-    S = (seconds - (M * 60) );
+    M = (result / 60);
+    S = (result - (M * 60) );
+
 
     return QString::number(M) + " мин. " + QString::number(S) + " сек.";
 }

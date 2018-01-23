@@ -52,7 +52,7 @@ private:
 
     void setLessonNow           ();
 
-    QString restTime            (int timeInSec, QTime currentTime);
+    QString restTime            (int timeInSec, int currentTime);
 
 //****************************************************************************
 // contents protocol
@@ -71,9 +71,15 @@ private:
 
     struct lessonTime
     {
-        bool    isLessonEnabled = false;
-        QString begin = 0;
-        QString end   = 0;
+        bool    isLessonEnabled         = false;
+
+        QString begin                   = 0;
+        QString end                     = 0;
+        QString nextLessonBegin         = 0;
+
+        int beginInSec                  = -1;
+        int endInSec                    = -1;
+        int nextLessonBeginInSec        = -1;
     };
 
     lessonTime**                pDoubleArray = 0;
@@ -87,7 +93,7 @@ private slots:
     void slotTryReconnect                   ();
 
     void slotSetCurrentTime                 ();
-    void slotSelectCurrentLesson            ();
+    void slotSelectCurrentLesson            (int currentTimeInSec);
     void slotTimerDefininBeginningAndEnd    ();
 };
 
