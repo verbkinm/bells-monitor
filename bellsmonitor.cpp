@@ -48,20 +48,20 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
                                 + textSize \
                                 + "px; gridline-color: black");
     this->setLayout(pLayout);
-//    this->showFullScreen();
+    this->showFullScreen();
 
 
-    QWidget* pwgt1 = new QWidget(this);
-    QPalette pal;
-    pal.setColor(pwgt1->backgroundRole(), Qt::blue);
-    pwgt1->setPalette(pal);
-    pwgt1->resize(100, 100);
-    pwgt1->move(25, 25);
-    pwgt1->setAutoFillBackground(true);
+//    QWidget* pwgt1 = new QWidget(this);
+//    QPalette pal;
+//    pal.setColor(pwgt1->backgroundRole(), Qt::blue);
+//    pwgt1->setPalette(pal);
+//    pwgt1->resize(100, 100);
+//    pwgt1->move(25, 25);
+//    pwgt1->setAutoFillBackground(true);
 
 
-    pwgt1->show();
-    QPixmap pix(":/img/lyceum.png");
+//    pwgt1->show();
+//    QPixmap pix(":/img/lyceum.png");
 }
 void BellsMonitor::createClock()
 {
@@ -310,8 +310,6 @@ void BellsMonitor::slotSetCurrentTime()
         if(pDoubleArray[0][numberCurrentLesson].beginInSec <= currentTimeInSec)
             slotSelectCurrentLesson(currentTimeInSec);
     }
-//    if( (isLessonNow == -1) || (numberNextLesson == -1))
-//        firstPartClock = "\0";
 
     secondPartClock = QString("<span style='color:red'>" + secondPartClock + "</span>");
 
@@ -362,9 +360,17 @@ void BellsMonitor::slotSelectCurrentLesson(int currentTimeInSec)
                     continue;
                 if(currentTimeInSec < pDoubleArray[0][i].beginInSec){
                     numberNextLesson = i;
-                    qDebug() << i;
                     break;
                 }
+            }
+        }
+//        qDebug() << numberNextLesson;
+        if(numberNextLesson == -1){
+            for (int i = 0; i < numbersOfLessonInChange[0]; ++i) {
+                if(pDoubleArray[0][i].begin.startsWith(dash))
+                    continue;
+                numberNextLesson = i;
+                break;
             }
         }
     }
@@ -375,10 +381,9 @@ QString BellsMonitor::restTime(int timeInSec, int currentTime)
     int M, S;
 
     result = timeInSec - currentTime;
-//    if(result < 0){
-//        return "ДО ЗАВТРА";
-//    }
-//        seconds += 86400;
+    if(result < 0)
+        result += 86400;
+
 
     M = (result / 60);
     S = (result - (M * 60) );
