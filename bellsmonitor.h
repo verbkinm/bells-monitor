@@ -27,7 +27,7 @@ private:
     QTcpSocket*                 m_pTcpSocket;
     quint16                     m_nNextBlockSize;
 
-    QTimer                      timerWait, timerCurrentTime, timerCheckInterval, timerDefininBeginningAndEnd;
+    QTimer                      timerWait, timerCurrentTime;
     QLabel                      message, clock;
 
     int                         isLessonNow = -1;
@@ -50,9 +50,11 @@ private:
 
     void createClock            ();
 
-    void setLessonNow           ();
+    void selectCurrentLesson    (int currentTimeInSec);
 
     QString restTime            (int timeInSec, int currentTime);
+
+    void zebra                  ();
 
 //****************************************************************************
 // contents protocol
@@ -93,8 +95,6 @@ private slots:
     void slotTryReconnect                   ();
 
     void slotSetCurrentTime                 ();
-    void slotSelectCurrentLesson            (int currentTimeInSec);
-    void slotTimerDefininBeginningAndEnd    ();
 };
 
 #endif // BELLSMONITOR_H
