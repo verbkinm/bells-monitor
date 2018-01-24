@@ -2,6 +2,8 @@
 
 #include <QDebug>
 #include <QDate>
+#include <QPixmap>
+#include <QPalette>
 
 #define _green      "#006400"
 #define _black      "#000000"
@@ -28,7 +30,7 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
 
     connect(&timerWait,         SIGNAL(timeout()), this, SLOT(slotTryReconnect())   );
     connect(&timerCurrentTime,  SIGNAL(timeout()), this, SLOT(slotSetCurrentTime()) );
-//    connect(&timerCheckInterval,SIGNAL(timeout()), this, SLOT(slotSelectCurrentLesson())  );
+//    connect(&timerCheckInterv/new/prefix1al,SIGNAL(timeout()), this, SLOT(slotSelectCurrentLesson())  );
     connect(&timerDefininBeginningAndEnd,SIGNAL(timeout()), this, SLOT(slotTimerDefininBeginningAndEnd())  );
 
 
@@ -46,7 +48,20 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
                                 + textSize \
                                 + "px; gridline-color: black");
     this->setLayout(pLayout);
-    this->showFullScreen();
+//    this->showFullScreen();
+
+
+    QWidget* pwgt1 = new QWidget(this);
+    QPalette pal;
+    pal.setColor(pwgt1->backgroundRole(), Qt::blue);
+    pwgt1->setPalette(pal);
+    pwgt1->resize(100, 100);
+    pwgt1->move(25, 25);
+    pwgt1->setAutoFillBackground(true);
+
+
+    pwgt1->show();
+    QPixmap pix(":/img/lyceum.png");
 }
 void BellsMonitor::createClock()
 {

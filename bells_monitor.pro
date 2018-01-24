@@ -30,4 +30,7 @@ SOURCES += \
 HEADERS += \
         bellsmonitor.h
 
+RESOURCES += \
+    img.qrc
+
 
