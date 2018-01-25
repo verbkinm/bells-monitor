@@ -9,6 +9,7 @@
 #include <QTcpSocket>
 #include <QLabel>
 #include <QTimer>
+#include <QSettings>
 
 class BellsMonitor;
 
@@ -24,6 +25,8 @@ public:
     QTableWidget*               pTable = 0;
 
 private:
+    QSettings           settings;
+
     QTcpSocket*                 m_pTcpSocket;
     quint16                     m_nNextBlockSize;
 
@@ -41,7 +44,11 @@ private:
 
     QString                     textColor, backgroundColor;
     QString                     SelectTextColor, SelectBackgroundColor;
-    QString                     textSize;
+
+//Settings value
+    QString                     server_ip, textSize;
+    int                         server_port;
+//Settings value
 
     void createTables           (int numbersOfLessons);
     void errorServerConnection  ();
@@ -55,6 +62,8 @@ private:
     QString restTime            (int timeInSec, int currentTime);
 
     void zebra                  ();
+
+    void readSettings           ();
 
 //****************************************************************************
 // contents protocol
