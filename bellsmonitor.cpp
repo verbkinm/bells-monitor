@@ -3,8 +3,7 @@
 #include <QDebug>
 #include <QDate>
 #include <QPixmap>
-//#include <QPalette>
-#include <QFile>
+#include <QPalette>
 
 #define textColor               "#000000"
 #define backgroundColor         "#ffffff"
@@ -13,18 +12,16 @@
 #define headerBackgroundColor   QColor(144, 238, 144,200)
 #define backgroundColorAlpha    QColor(255,255,255,230)
 
-//#define textSize   "48"
+#define textSize   "48"
 
 #define dash        "-- : --"
 
 BellsMonitor::BellsMonitor(QWidget *parent) :
-    QWidget(parent), settings("LYCEUM","Bells-monitor")
+    QWidget(parent)
 {
-    readSettings();
-
     m_pTcpSocket = new QTcpSocket(this);
 
-    m_pTcpSocket->connectToHost(server_ip, server_port); // !!!!!!!!!!!!!!!!
+    m_pTcpSocket->connectToHost("localhost", 8083); // !!!!!!!!!!!!!!!!
 
     connect(m_pTcpSocket,       SIGNAL(connected()), SLOT(slotConnected()));
     connect(m_pTcpSocket,       SIGNAL(readyRead()), SLOT(slotReadyRead()));
@@ -284,22 +281,22 @@ void BellsMonitor::slotSetCurrentTime()
     int currentTimeInSec = QTime::currentTime().hour() * 3600 \
                            + QTime::currentTime().minute() * 60 \
                            + QTime::currentTime().second();
-    if(isLessonNow == 1){
+    if(isLessonNow){
         firstPartClock = "Урок заканчивается через ";
 
         secondPartClock = restTime(pDoubleArray[0][numberCurrentLesson].endInSec, currentTimeInSec);
 
-        if(pDoubleArray[0][numberCurrentLesson].endInSec <= currentTimeInSec)
-            selectCurrentLesson(currentTimeInSec);
+        qDebug() << "isLessonNow" << pDoubleArray[0][numberCurrentLesson].endInSec << currentTimeInSec;
+        selectCurrentLesson(currentTimeInSec);
     }
-    if(isLessonNow == 0){
+    if(!isLessonNow){
         firstPartClock = "Начало <span style='color:red'>" \
                 + QString::number(numberNextLesson) \
                 + QString("</span> урока через ");
         secondPartClock = restTime(pDoubleArray[0][numberNextLesson].beginInSec , currentTimeInSec);
 
-        if(pDoubleArray[0][numberCurrentLesson].beginInSec <= currentTimeInSec)
-            selectCurrentLesson(currentTimeInSec);
+        qDebug() << "!isLessonNow" << pDoubleArray[0][numberCurrentLesson].beginInSec << pDoubleArray[0][numberNextLesson].nextLessonBeginInSec << currentTimeInSec;
+        selectCurrentLesson(currentTimeInSec);
     }
 
     secondPartClock = QString("<span style='color:red'>" + secondPartClock + "</span>");
@@ -317,34 +314,27 @@ void BellsMonitor::selectCurrentLesson(int currentTimeInSec)
 {
     if(pTable != 0)
     {
-        isLessonNow = 0;
+        isLessonNow = false;
+        numberCurrentLesson = -1;
         for (int i = 0; i < numbersOfLessonInChange[0]; ++i) {
             if(pDoubleArray[0][i].begin == "-- : --")
                 continue;
 
             if( (pDoubleArray[0][i].beginInSec < currentTimeInSec) && (currentTimeInSec < pDoubleArray[0][i].endInSec)){
-//                pTable->item(i + 1, 0)->setBackgroundColor(QColor(SelectBackgroundColor));
                 pTable->item(i + 1, 0)->setTextColor(QColor(SelectTextColor));
-//                pTable->item(i + 1, 1)->setBackgroundColor(QColor(SelectBackgroundColor));
                 pTable->item(i + 1, 1)->setTextColor(QColor(SelectTextColor));
-//                pTable->item(i + 1, 2)->setBackgroundColor(QColor(SelectBackgroundColor));
                 pTable->item(i + 1, 2)->setTextColor(QColor(SelectTextColor));
 
-                isLessonNow         = 1;
+                isLessonNow         = true;
                 numberCurrentLesson = i;
-
-//                secondPartClock     = restTime( pDoubleArray[0][i].endInSec, currentTimeInSec );
             }
             else{
-//                pTable->item(i + 1, 0)->setBackgroundColor(QColor(backgroundColorAlpha));
                 pTable->item(i + 1, 0)->setTextColor(QColor(textColor));
-//                pTable->item(i + 1, 1)->setBackgroundColor(backgroundColorAlpha);
                 pTable->item(i + 1, 1)->setTextColor(QColor(textColor));
-//                pTable->item(i + 1, 2)->setBackgroundColor(QColor(backgroundColorAlpha));
                 pTable->item(i + 1, 2)->setTextColor(QColor(textColor));
             }
         }
-        if(isLessonNow == 0){
+        if(!isLessonNow){
             numberNextLesson = -1;
             for (int i = 0; i < numbersOfLessonInChange[0]; ++i){
                 if(pDoubleArray[0][i].begin.startsWith(dash))
@@ -355,7 +345,6 @@ void BellsMonitor::selectCurrentLesson(int currentTimeInSec)
                 }
             }
         }
-//        qDebug() << numberNextLesson;
         if(numberNextLesson == -1){
             for (int i = 0; i < numbersOfLessonInChange[0]; ++i) {
                 if(pDoubleArray[0][i].begin.startsWith(dash))
@@ -365,6 +354,7 @@ void BellsMonitor::selectCurrentLesson(int currentTimeInSec)
             }
         }
     }
+    qDebug() << "selectCurrentLesson" << numberCurrentLesson << numberNextLesson << isLessonNow;
 }
 QString BellsMonitor::restTime(int timeInSec, int currentTime)
 {
@@ -375,10 +365,8 @@ QString BellsMonitor::restTime(int timeInSec, int currentTime)
     if(result < 0)
         result += 86400;
 
-
     M = (result / 60);
     S = (result - (M * 60) );
-
 
     return QString::number(M) + " мин. " + QString::number(S) + " сек.";
 }
@@ -388,19 +376,5 @@ void BellsMonitor::zebra()
         pTable->item(i + 1, 0)->setBackgroundColor(SelectBackgroundColor);
         pTable->item(i + 1, 1)->setBackgroundColor(SelectBackgroundColor);
         pTable->item(i + 1, 2)->setBackgroundColor(SelectBackgroundColor);
-    }
-}
-
-void BellsMonitor::readSettings()
-{
-    server_ip       = settings.value("settings/server_ip",   "localhost").toString();
-    server_port     = settings.value("settings/server_port", 8083).toInt();
-    textSize        = settings.value("settings/textSize",    48).toString();
-
-    QFile fileSettings("/home/user/.config/LYCEUM/Bells-monitor.conf");
-    if( !(fileSettings.exists()) ){
-        settings.setValue("settings/server_ip",   "localhost");
-        settings.setValue("settings/server_port",  8083);
-        settings.setValue("settings/textSize",     48);
     }
 }
