@@ -3,7 +3,8 @@
 #include <QDebug>
 #include <QDate>
 #include <QPixmap>
-#include <QPalette>
+//#include <QPalette>
+#include <QFile>
 
 #define textColor               "#000000"
 #define backgroundColor         "#ffffff"
@@ -12,16 +13,18 @@
 #define headerBackgroundColor   QColor(144, 238, 144,200)
 #define backgroundColorAlpha    QColor(255,255,255,230)
 
-#define textSize   "48"
+//#define textSize   "48"
 
 #define dash        "-- : --"
 
 BellsMonitor::BellsMonitor(QWidget *parent) :
-    QWidget(parent)
+    QWidget(parent), settings("LYCEUM", "Bells-monitor")
 {
+    readSettings();
+
     m_pTcpSocket = new QTcpSocket(this);
 
-    m_pTcpSocket->connectToHost("localhost", 8083); // !!!!!!!!!!!!!!!!
+    m_pTcpSocket->connectToHost(server_ip, server_port); // !!!!!!!!!!!!!!!!
 
     connect(m_pTcpSocket,       SIGNAL(connected()), SLOT(slotConnected()));
     connect(m_pTcpSocket,       SIGNAL(readyRead()), SLOT(slotReadyRead()));
@@ -286,7 +289,7 @@ void BellsMonitor::slotSetCurrentTime()
 
         secondPartClock = restTime(pDoubleArray[0][numberCurrentLesson].endInSec, currentTimeInSec);
 
-        qDebug() << "isLessonNow" << pDoubleArray[0][numberCurrentLesson].endInSec << currentTimeInSec;
+//        qDebug() << "isLessonNow" << pDoubleArray[0][numberCurrentLesson].endInSec << currentTimeInSec;
         selectCurrentLesson(currentTimeInSec);
     }
     if(!isLessonNow){
@@ -295,7 +298,7 @@ void BellsMonitor::slotSetCurrentTime()
                 + QString("</span> урока через ");
         secondPartClock = restTime(pDoubleArray[0][numberNextLesson].beginInSec , currentTimeInSec);
 
-        qDebug() << "!isLessonNow" << pDoubleArray[0][numberCurrentLesson].beginInSec << pDoubleArray[0][numberNextLesson].nextLessonBeginInSec << currentTimeInSec;
+//        qDebug() << "!isLessonNow" << pDoubleArray[0][numberCurrentLesson].beginInSec << pDoubleArray[0][numberNextLesson].nextLessonBeginInSec << currentTimeInSec;
         selectCurrentLesson(currentTimeInSec);
     }
 
@@ -354,7 +357,7 @@ void BellsMonitor::selectCurrentLesson(int currentTimeInSec)
             }
         }
     }
-    qDebug() << "selectCurrentLesson" << numberCurrentLesson << numberNextLesson << isLessonNow;
+//    qDebug() << "selectCurrentLesson" << numberCurrentLesson << numberNextLesson << isLessonNow;
 }
 QString BellsMonitor::restTime(int timeInSec, int currentTime)
 {
@@ -376,5 +379,20 @@ void BellsMonitor::zebra()
         pTable->item(i + 1, 0)->setBackgroundColor(SelectBackgroundColor);
         pTable->item(i + 1, 1)->setBackgroundColor(SelectBackgroundColor);
         pTable->item(i + 1, 2)->setBackgroundColor(SelectBackgroundColor);
+    }
+//    qDebug() << settings.fileName();
+}
+void BellsMonitor::readSettings()
+{
+    server_ip       = settings.value("settings/server_ip",   "localhost").toString();
+    server_port     = settings.value("settings/server_port", 8083).toInt();
+    textSize        = settings.value("settings/textSize",    48).toString();
+
+    QFile fileSettings(settings.fileName());
+
+    if( !(fileSettings.exists()) ){
+        settings.setValue("settings/server_ip",   "localhost");
+        settings.setValue("settings/server_port",  8083);
+        settings.setValue("settings/textSize",     48);
     }
 }

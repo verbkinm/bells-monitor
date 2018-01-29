@@ -26,6 +26,10 @@ public:
 
 private:
     QSettings                   settings;
+//Settings value
+    QString                     server_ip, textSize;
+    int                         server_port;
+//Settings value
 
     QTcpSocket*                 m_pTcpSocket;
     quint16                     m_nNextBlockSize;
@@ -43,11 +47,6 @@ private:
 
     QString                     textColor, backgroundColor;
     QString                     SelectTextColor, SelectBackgroundColor;
-
-//Settings value
-    QString                     server_ip, textSize;
-    int                         server_port;
-//Settings value
 
     void createTables           (int numbersOfLessons);
     void errorServerConnection  ();
