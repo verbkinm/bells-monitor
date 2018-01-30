@@ -25,7 +25,11 @@ public:
     QTableWidget*               pTable = 0;
 
 private:
-    QSettings           settings;
+    QSettings                   settings;
+//Settings value
+    QString                     server_ip, textSize;
+    int                         server_port;
+//Settings value
 
     QTcpSocket*                 m_pTcpSocket;
     quint16                     m_nNextBlockSize;
@@ -33,22 +37,16 @@ private:
     QTimer                      timerWait, timerCurrentTime;
     QLabel                      message, clock;
 
-    int                         isLessonNow = -1;
+    bool                        isLessonNow = false;
 
     int                         numberCurrentLesson  = -1;
     int                         numberPreviousLesson = -1;
     int                         numberNextLesson     = -1;
 
-                            //Начало урока через         n             мин.(сек.)      дата и время
     QString                     firstPartClock,                     secondPartClock;
 
     QString                     textColor, backgroundColor;
     QString                     SelectTextColor, SelectBackgroundColor;
-
-//Settings value
-    QString                     server_ip, textSize;
-    int                         server_port;
-//Settings value
 
     void createTables           (int numbersOfLessons);
     void errorServerConnection  ();
@@ -68,25 +66,26 @@ private:
 //****************************************************************************
 // contents protocol
 //
+// contents protocol
 // in >> размер данных(quint16)
 //    for (int i = 0; i < 2; ++i){
-//      >> №смены(int) >> состояние смены(bool) >> кол-во уроков в смене(int)
+//      in >> состояние смены(bool) >> кол-во уроков в смене(int)
 //      for (int j = 0; j < кол-во уроков в смене[i]; ++j)
-//          >> начало урока(QString) >> конец урока(QString)
+//         in >> начало урока(QString) >> конец урока(QString)
 //
 //****************************************************************************
 
-    unsigned short numbersOfLessonInChange[2] = { 0, 0 };  //0 - 1-я смена, 1 - 2-я смена
+    unsigned short numbersOfLessonInChange[2] = { 0, 0 };  //0 - 1-Ñ ÑÐ¼ÐµÐ½Ð°, 1 - 2-Ñ ÑÐ¼ÐµÐ½Ð°
 
     bool isChangesEnabled[2] = { false, false };
 
     struct lessonTime
     {
-        bool    isLessonEnabled         = false;
+//        bool    isLessonEnabled         = false;
 
         QString begin                   = 0;
         QString end                     = 0;
-        QString nextLessonBegin         = 0;
+//        QString nextLessonBegin         = 0;
 
         int beginInSec                  = -1;
         int endInSec                    = -1;
