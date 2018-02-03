@@ -277,7 +277,7 @@ void BellsMonitor::deleteTable()
 void BellsMonitor::slotTryReconnect()
 {
     timerWait.stop();
-    m_pTcpSocket->connectToHost("localhost", 8083);
+    m_pTcpSocket->connectToHost(server_ip, server_port);
 }
 void BellsMonitor::slotSetCurrentTime()
 {
