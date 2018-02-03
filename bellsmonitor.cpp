@@ -362,7 +362,7 @@ void BellsMonitor::selectCurrentLesson(int currentTimeInSec)
 QString BellsMonitor::restTime(int timeInSec, int currentTime)
 {
     int result;
-    int M, S;
+    int H, M, S;
 
     result = timeInSec - currentTime;
     if(result < 0)
@@ -370,6 +370,12 @@ QString BellsMonitor::restTime(int timeInSec, int currentTime)
 
     M = (result / 60);
     S = (result - (M * 60) );
+
+    if(M > 59){
+        H = M / 60;
+        M = M - H * 60;
+        return QString::number(H) + " час. " + QString::number(M) + " мин. " + QString::number(S) + " сек.";
+    }
 
     return QString::number(M) + " мин. " + QString::number(S) + " сек.";
 }
