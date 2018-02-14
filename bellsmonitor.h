@@ -29,6 +29,7 @@ private:
 //Settings value
     QString                     server_ip, textSize;
     int                         server_port;
+    bool                        fullScreen;
 //Settings value
 
     QTcpSocket*                 m_pTcpSocket;
@@ -75,17 +76,14 @@ private:
 //
 //****************************************************************************
 
-    unsigned short numbersOfLessonInChange[2] = { 0, 0 };  //0 - 1-Ñ ÑÐ¼ÐµÐ½Ð°, 1 - 2-Ñ ÑÐ¼ÐµÐ½Ð°
+    unsigned short numbersOfLessonInChange[2] = { 0, 0 };
 
     bool isChangesEnabled[2] = { false, false };
 
     struct lessonTime
     {
-//        bool    isLessonEnabled         = false;
-
         QString begin                   = 0;
         QString end                     = 0;
-//        QString nextLessonBegin         = 0;
 
         int beginInSec                  = -1;
         int endInSec                    = -1;
