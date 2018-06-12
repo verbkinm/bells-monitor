@@ -22,7 +22,7 @@ public:
     ~BellsMonitor();
 
     QVBoxLayout*                pLayout;
-    QTableWidget*               pTable = 0;
+    QTableWidget                *pTable[2]; //таблицы для смен
 
 private:
     QSettings                   settings;
@@ -30,44 +30,47 @@ private:
     QString                     server_ip, textSize;
     int                         server_port;
     bool                        fullScreen;
+    int                         tableChangeTimer;
 //Settings value
 
     QTcpSocket*                 m_pTcpSocket;
     quint16                     m_nNextBlockSize;
 
-    QTimer                      timerWait, timerCurrentTime;
+    QTimer                      timerWait, timerCurrentTime, timerCurrentPeriodDisplay;
     QLabel                      message, clock;
 
-    bool                        isLessonNow = false;
+    bool                        isConnected = false;
+    int                         currentPeriodDisplay = -1;
+    bool                        isLessonNow [2] = {false, false};
 
-    int                         numberCurrentLesson  = -1;
-    int                         numberPreviousLesson = -1;
-    int                         numberNextLesson     = -1;
+    int                         numberCurrentLesson[2]  = { -1, -1 };
+    int                         numberPreviousLesson[2] = { -1, -1 };
+    int                         numberNextLesson[2]     = { -1, -1 };
 
-    QString                     firstPartClock,                     secondPartClock;
+    QString                     firstPartClock, secondPartClock;
 
     QString                     textColor, backgroundColor;
     QString                     SelectTextColor, SelectBackgroundColor;
 
-    void createTables           (int numbersOfLessons);
-    void errorServerConnection  ();
-    void clear                  ();
-    void deleteTable            ();
+    void clockSetText           (void);
+    void createTable            (int numbersOfLessons, short unsigned int numberOfTable);
+    void errorServerConnection  (void);
+    void clear                  (void);
+    void deleteTable            (short unsigned int numberOfTable);
 
-    void createClock            ();
+    void createClock            (void);
 
     void selectCurrentLesson    (int currentTimeInSec);
 
     QString restTime            (int timeInSec, int currentTime);
 
-    void zebra                  ();
+    void zebra                  (short unsigned int numberOfTable);
 
-    void readSettings           ();
+    void readSettings           (void);
 
 //****************************************************************************
 // contents protocol
 //
-// contents protocol
 // in >> размер данных(quint16)
 //    for (int i = 0; i < 2; ++i){
 //      in >> состояние смены(bool) >> кол-во уроков в смене(int)
@@ -93,14 +96,15 @@ private:
     lessonTime**                pDoubleArray = 0;
 
 private slots:
-    void slotReadyRead                      ();
+    void slotReadyRead                      (void);
     void slotError                          (QAbstractSocket::SocketError);
-    void slotSendToServer                   ();
-    void slotConnected                      ();
+//    void slotSendToServer                   (void);
+    void slotConnected                      (void);
 
-    void slotTryReconnect                   ();
+    void slotTryReconnect                   (void);
 
-    void slotSetCurrentTime                 ();
+    void slotSetCurrentTime                 (void);
+    void slotDisplayPeriod                  (void);
 };
 
 #endif // BELLSMONITOR_H

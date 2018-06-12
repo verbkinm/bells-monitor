@@ -17,6 +17,9 @@
 BellsMonitor::BellsMonitor(QWidget *parent) :
     QWidget(parent), settings("LYCEUM", "Bells-monitor")
 {
+    pTable[0] = 0;
+    pTable[1] = 0;
+
     readSettings();
 
     m_pTcpSocket = new QTcpSocket(this);
@@ -31,11 +34,13 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
     connect(&timerCurrentTime,  SIGNAL(timeout()), this, SLOT(slotSetCurrentTime()) );
 
 
+
     pLayout = new QVBoxLayout;
     pLayout->setMargin(10);
 
 //create table
-    createTables(0);
+//    createTables(0,0);
+//    createTables(0,1);
 
     this->setStyleSheet("background-color:" + QString(backgroundColor) + "; \
                                  color: " + textColor +"; \
@@ -52,17 +57,14 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
     else
         this->showMaximized();
 }
-void BellsMonitor::createClock()
+void BellsMonitor::createClock(void)
 {
-    clock.setText(firstPartClock\
-                  + secondPartClock \
-                  + "<br>" \
-                  + QTime::currentTime().toString("hh:mm:ss") \
-                  + "   " \
-                  + QDate::currentDate().toString("dd-MM-yyyy"));
+    clockSetText();
 
     clock.setAlignment(Qt::AlignCenter);
     timerCurrentTime.start(200);
+ //Отображения смен по очедери
+
     pLayout->addWidget(&clock);
 }
 BellsMonitor::~BellsMonitor()
@@ -75,17 +77,17 @@ void BellsMonitor::errorServerConnection()
     message.setAlignment(Qt::AlignCenter);
     message.setStyleSheet("font-size: 64px;");
     pLayout->addWidget(&message);
-
     createClock();
 
     firstPartClock  = "\0";
     secondPartClock = "\0";
 
-    isLessonNow = -1;
+    isLessonNow[0] = false;
+    isLessonNow[1] = false;
 }
-void BellsMonitor::createTables(int numbersOfLessons)
+void BellsMonitor::createTable(int numbersOfLessons, short unsigned int numberOfTable)
 {
-    deleteTable();
+    deleteTable(numberOfTable);
 
     if(numbersOfLessons == 0)
     {
@@ -93,64 +95,90 @@ void BellsMonitor::createTables(int numbersOfLessons)
         return;
     }
 
-    int rows = numbersOfLessons + 1;
+    int rows = numbersOfLessons + 2;
 
-    pTable = new QTableWidget(rows,3);
-    pTable->setStyleSheet("background-image: url(:/img/lyceum.png); \
-                          background-repeat: repeat-xy; \
-                          background-position: center; \
-                          background-origin: content; background-attachment: scroll;");
+    pTable[numberOfTable] = new QTableWidget(rows,3);
 
+    pTable[numberOfTable]->setStyleSheet("background-image: url(:/img/lyceum.png); \
+                              background-repeat: repeat-xy; \
+                              background-position: center; \
+                              background-origin: content; background-attachment: scroll;");
+
+// ############################################################################################
 //creating tables
     for (int column = 0; column < 3; column++)
-        for (int row = 0; row < numbersOfLessons+1; row++){
-            pTable->setItem(row,column,new QTableWidgetItem);
-            pTable->item(row,column)->setTextAlignment(Qt::AlignCenter);
-            pTable->item(row,column)->setBackgroundColor(QColor(backgroundColorAlpha));
-        }
-//set my headers
-    pTable->item(0, 0)->setText("№");
-    pTable->item(0, 1)->setText("Начало урока");
-    pTable->item(0, 2)->setText("Окончание урока");
+        for (int row = 0; row < numbersOfLessons+2; row++){
+            if(row == 0 && column == 0){
+                pTable[numberOfTable]->setItem(row,column,new QTableWidgetItem);
+                pTable[numberOfTable]->setSpan(0,0,1,3);
+            }
+            else if(row != 0){
+                pTable[numberOfTable]->setItem(row,column,new QTableWidgetItem);
+                pTable[numberOfTable]->item(row,column)->setTextAlignment(Qt::AlignCenter);
+                pTable[numberOfTable]->item(row,column)->setBackgroundColor(QColor(backgroundColorAlpha));
+            }
+         }
 //insert text in table
     for (int column = 0; column < 3; column++)
-        for (int row = 1; row < numbersOfLessons+1; row++){
+        for (int row = 2; row < numbersOfLessons+2; row++){
             if(column==1)
-                pTable->item(row, column)->setText(pDoubleArray[0][row-1].begin);
+                pTable[numberOfTable]->item(row, column)->setText(pDoubleArray[numberOfTable][row-2].begin);
             if(column==2)
-                pTable->item(row, column)->setText(pDoubleArray[0][row-1].end);
+                pTable[numberOfTable]->item(row, column)->setText(pDoubleArray[numberOfTable][row-2].end);
         }
 //set numbers for lessons
-    for (int i = 1; i < rows; ++i)
-        pTable->item(i, 0)->setText(QString::number(i-1));
+    for (int j = 2; j < rows; ++j)
+        pTable[numberOfTable]->item(j, 0)->setText(QString::number(j-2));
+
+//set number of period
+    pTable[numberOfTable]->item(0, 0)->setBackgroundColor(QColor(250, 250, 250,200));
+    pTable[numberOfTable]->item(0, 0)->setText("Смена №" + QString::number(numberOfTable+1));
+    pTable[numberOfTable]->item(0, 0)->setTextAlignment(Qt::AlignCenter);
+
 //set table's properties
-    pTable->verticalHeader()->hide();
-    pTable->horizontalHeader()->hide();
-
-    pTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-    pTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    pTable[numberOfTable]->verticalHeader()->hide();
+    pTable[numberOfTable]->horizontalHeader()->hide();
+    pTable[numberOfTable]->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    pTable[numberOfTable]->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 //stretch
-    for(int i = 0; i < rows; i++)
-        pTable->verticalHeader()->setSectionResizeMode(i, QHeaderView::Stretch);
+    for(int j = 0; j < rows; j++)
+        pTable[numberOfTable]->verticalHeader()->setSectionResizeMode(j, QHeaderView::Stretch);
+//prperies
+    pTable[numberOfTable]->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    pTable[numberOfTable]->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    pTable[numberOfTable]->setEditTriggers(0);
+    pTable[numberOfTable]->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-    pTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    pTable->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    pTable->setEditTriggers(0);
-    pTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    pTable[numberOfTable]->item(1, 0)->setBackgroundColor(headerBackgroundColor);
+    pTable[numberOfTable]->item(1, 1)->setBackgroundColor(headerBackgroundColor);
+    pTable[numberOfTable]->item(1, 2)->setBackgroundColor(headerBackgroundColor);
 
-    pTable->item(0, 0)->setBackgroundColor(headerBackgroundColor);
-    pTable->item(0, 1)->setBackgroundColor(headerBackgroundColor);
-    pTable->item(0, 2)->setBackgroundColor(headerBackgroundColor);
-    zebra();
+    zebra(numberOfTable);
 
-    int currentTimeInSec = QTime::currentTime().hour() * 3600 \
-                           + QTime::currentTime().minute() * 60 \
-                           + QTime::currentTime().second();
+//set text in headers
+    pTable[numberOfTable]->item(1, 0)->setText("№");
+    pTable[numberOfTable]->item(1, 1)->setText("Начало урока");
+    pTable[numberOfTable]->item(1, 2)->setText("Окончание урока");
 
-    selectCurrentLesson(currentTimeInSec);
+}
+void BellsMonitor::clockSetText()
+{
+    clock.setText(firstPartClock\
+                  + secondPartClock \
+                  + "<hr>" \
+                  + "<b>" \
+                  + QTime::currentTime().toString("hh:mm:ss") \
+                  + "   " \
+                  + QDate::currentDate().toString("dd-MM-yyyy") \
+                  + "<\b>" \
+                  );
 }
 void BellsMonitor::slotReadyRead()
 {
+    isChangesEnabled[0] = false;
+    isChangesEnabled[1] = false;
+    timerCurrentPeriodDisplay.stop();
+
     QDataStream in(m_pTcpSocket);
     in.setVersion(QDataStream::Qt_5_3);
 
@@ -167,6 +195,7 @@ void BellsMonitor::slotReadyRead()
         pDoubleArray[i] = new lessonTime[numbersOfLessonInChange[i]];
 
         for (int j = 0; j < numbersOfLessonInChange[i]; ++j){
+
             in >> pDoubleArray[i][j].begin >> pDoubleArray[i][j].end;
 
             QString begin   =  pDoubleArray[i][j].begin;
@@ -174,6 +203,7 @@ void BellsMonitor::slotReadyRead()
 
 //установка переменной nextLessonBeginInSec
             if( !(begin.startsWith(dash)) ) {
+
                 int hourBegin   = begin.split(":")[0].toInt();
                 int minutBegin  = begin.split(":")[1].toInt();
 
@@ -183,7 +213,7 @@ void BellsMonitor::slotReadyRead()
                 pDoubleArray[i][j].beginInSec = hourBegin * 3600 + minutBegin * 60;
                 pDoubleArray[i][j].endInSec = hourEnd * 3600 + minutEnd * 60;
 
-                if( j > 0){
+                if( j > 0 ){
                         for (int ii = j-1; ii >= 0; --ii) {
                             if(pDoubleArray[i][ii].begin.startsWith(dash))
                                 continue;
@@ -197,6 +227,7 @@ void BellsMonitor::slotReadyRead()
         }
     }
 // nextLessonBeginInSec для последнего активного урока - это beginInSec первого активного урока
+    clear();
     for (int i = 0; i < 2; ++i){
         for (int j = numbersOfLessonInChange[i]-1; j > 0; --j){
             if(pDoubleArray[i][j].begin.startsWith(dash))
@@ -211,12 +242,30 @@ void BellsMonitor::slotReadyRead()
             }
             break;
         }
+        createTable(numbersOfLessonInChange[i], i);
+        pTable[i]->hide();
+        pLayout->addWidget(pTable[i]);
     }
-
-    clear();
-    createTables(numbersOfLessonInChange[0]);
-    pLayout->addWidget(pTable);
     createClock();
+
+    if(isChangesEnabled[0]){
+        currentPeriodDisplay = 0;
+        pTable[0]->show();
+    }
+    else if(isChangesEnabled[1]){
+            currentPeriodDisplay = 1;
+            pTable[1]->show();
+        }
+    else
+        qDebug() << "error currentPeriodDisplay";
+
+    disconnect(&timerCurrentPeriodDisplay, SIGNAL(timeout()), this, SLOT(slotDisplayPeriod()));
+
+
+    if(isChangesEnabled[0] && isChangesEnabled[1]){
+        connect(&timerCurrentPeriodDisplay,  SIGNAL(timeout()), this, SLOT(slotDisplayPeriod()) );
+        timerCurrentPeriodDisplay.start(tableChangeTimer);
+    }
 }
 void BellsMonitor::slotError(QAbstractSocket::SocketError err)
 {
@@ -235,43 +284,48 @@ void BellsMonitor::slotError(QAbstractSocket::SocketError err)
     errorServerConnection();
 
     m_pTcpSocket->disconnectFromHost();
+    isConnected = false;
     timerWait.start(1000);
-}
-void BellsMonitor::slotSendToServer()
-{
-    QByteArray  arrBlock;
-    QDataStream out(&arrBlock, QIODevice::WriteOnly);
-    out.setVersion(QDataStream::Qt_5_3);
-    out << quint16(0) << QTime::currentTime();
 
-    out.device()->seek(0);
-    out << quint16(arrBlock.size() - sizeof(quint16));
-
-    m_pTcpSocket->write(arrBlock);
+    timerCurrentPeriodDisplay.stop();
 }
+//void BellsMonitor::slotSendToServer()
+//{
+//    QByteArray  arrBlock;
+//    QDataStream out(&arrBlock, QIODevice::WriteOnly);
+//    out.setVersion(QDataStream::Qt_5_3);
+//    out << quint16(0) << QTime::currentTime();
+
+//    out.device()->seek(0);
+//    out << quint16(arrBlock.size() - sizeof(quint16));
+
+//    m_pTcpSocket->write(arrBlock);
+//}
 void BellsMonitor::slotConnected()
 {
+    isConnected = true;
     timerWait.stop();
     qDebug() << "Received the connected() signal";
 }
 void BellsMonitor::clear()
 {
-    deleteTable();
-    pLayout->removeWidget(&message);
+    for (int i = 0; i < 2; ++i){
+        deleteTable(i);
+        pLayout->removeWidget(&message);
+    }
     pLayout->removeWidget(&clock);
 }
-void BellsMonitor::deleteTable()
+void BellsMonitor::deleteTable(short unsigned int numberOfTable)
 {
-    if(pTable != 0){
+    if(pTable[numberOfTable] != 0){
         for (int column = 0; column < 3; column++){
-            for (int row = 0; row < pTable->rowCount(); row++){
-                delete pTable->item(row, column);
+            for (int row = 0; row < pTable[numberOfTable]->rowCount(); row++){
+                delete pTable[numberOfTable]->item(row, column);
             }
         }
-        delete pTable;
-        pTable = 0;
+        delete pTable[numberOfTable];
+        pTable[numberOfTable] = 0;
     }
-
 }
 void BellsMonitor::slotTryReconnect()
 {
@@ -280,74 +334,96 @@ void BellsMonitor::slotTryReconnect()
 }
 void BellsMonitor::slotSetCurrentTime()
 {
-    int currentTimeInSec = QTime::currentTime().hour() * 3600 \
-                           + QTime::currentTime().minute() * 60 \
-                           + QTime::currentTime().second();
-    if(isLessonNow){
-        firstPartClock = "Урок заканчивается через ";
-        secondPartClock = restTime(pDoubleArray[0][numberCurrentLesson].endInSec, currentTimeInSec);
-        selectCurrentLesson(currentTimeInSec);
-    }
-    if(!isLessonNow){
-        firstPartClock = "Начало <span style='color:red'>" \
-                + QString::number(numberNextLesson) \
-                + QString("</span> урока через ");
-        secondPartClock = restTime(pDoubleArray[0][numberNextLesson].beginInSec , currentTimeInSec);
-        selectCurrentLesson(currentTimeInSec);
+
+    if(currentPeriodDisplay < 0)
+        return;
+
+    if(isConnected){
+        int currentTimeInSec = QTime::currentTime().hour() * 3600 \
+                               + QTime::currentTime().minute() * 60 \
+                               + QTime::currentTime().second();
+
+        if(isLessonNow[currentPeriodDisplay]){
+            firstPartClock = "Урок заканчивается через ";
+            secondPartClock = restTime(pDoubleArray[currentPeriodDisplay][numberCurrentLesson[currentPeriodDisplay]].endInSec, currentTimeInSec);
+            selectCurrentLesson(currentTimeInSec);
+        }
+        else if( !isLessonNow[currentPeriodDisplay]  && numberNextLesson[currentPeriodDisplay] != -1){
+            firstPartClock = "Начало <span style='color:red'>" \
+                    + QString::number(numberNextLesson[currentPeriodDisplay]) \
+                    + QString("</span> урока через ");
+            secondPartClock = restTime(pDoubleArray[currentPeriodDisplay][numberNextLesson[currentPeriodDisplay]].beginInSec , currentTimeInSec);
+            selectCurrentLesson(currentTimeInSec);
+        }
+        else{
+            firstPartClock.clear();
+            secondPartClock.clear();
+            selectCurrentLesson(currentTimeInSec);
+        }
+        secondPartClock = QString("<span style='color:red'>" + secondPartClock + "</span>");
     }
 
-    secondPartClock = QString("<span style='color:red'>" + secondPartClock + "</span>");
-
-    clock.setText(firstPartClock\
-                  + secondPartClock \
-                  + "<br>" \
-                  + QTime::currentTime().toString("hh:mm:ss") \
-                  + "   " \
-                  + QDate::currentDate().toString("dd-MM-yyyy"));
+    clockSetText();
 }
 void BellsMonitor::selectCurrentLesson(int currentTimeInSec)
 {
-    if(pTable != 0)
-    {
-        isLessonNow = false;
-        numberCurrentLesson = -1;
-        for (int i = 0; i < numbersOfLessonInChange[0]; ++i) {
-            if(pDoubleArray[0][i].begin == "-- : --")
-                continue;
+    if(currentPeriodDisplay < 0)
+        return;
 
-            if( (pDoubleArray[0][i].beginInSec < currentTimeInSec) && (currentTimeInSec < pDoubleArray[0][i].endInSec)){
-                pTable->item(i + 1, 0)->setTextColor(QColor(SelectTextColor));
-                pTable->item(i + 1, 1)->setTextColor(QColor(SelectTextColor));
-                pTable->item(i + 1, 2)->setTextColor(QColor(SelectTextColor));
-
-                isLessonNow         = true;
-                numberCurrentLesson = i;
-            }
-            else{
-                pTable->item(i + 1, 0)->setTextColor(QColor(textColor));
-                pTable->item(i + 1, 1)->setTextColor(QColor(textColor));
-                pTable->item(i + 1, 2)->setTextColor(QColor(textColor));
-            }
-        }
-        if(!isLessonNow){
-            numberNextLesson = -1;
-            for (int i = 0; i < numbersOfLessonInChange[0]; ++i){
-                if(pDoubleArray[0][i].begin.startsWith(dash))
+        if(pTable[currentPeriodDisplay] != 0)
+        {
+            isLessonNow[currentPeriodDisplay] = false;
+            numberCurrentLesson[currentPeriodDisplay] = -1;
+            for (int j = 0; j < numbersOfLessonInChange[currentPeriodDisplay]; ++j) {
+                if(pDoubleArray[currentPeriodDisplay][j].begin == "-- : --")
                     continue;
-                if(currentTimeInSec < pDoubleArray[0][i].beginInSec){
-                    numberNextLesson = i;
+
+                if( (pDoubleArray[currentPeriodDisplay][j].beginInSec < currentTimeInSec) && (currentTimeInSec < pDoubleArray[currentPeriodDisplay][j].endInSec)){
+                    pTable[currentPeriodDisplay]->item(j + 2, 0)->setTextColor(QColor(SelectTextColor));
+                    pTable[currentPeriodDisplay]->item(j + 2, 1)->setTextColor(QColor(SelectTextColor));
+                    pTable[currentPeriodDisplay]->item(j + 2, 2)->setTextColor(QColor(SelectTextColor));
+
+                    isLessonNow[currentPeriodDisplay]         = true;
+                    numberCurrentLesson[currentPeriodDisplay] = j;
+                }
+                else{
+                    pTable[currentPeriodDisplay]->item(j + 2, 0)->setTextColor(QColor(textColor));
+                    pTable[currentPeriodDisplay]->item(j + 2, 1)->setTextColor(QColor(textColor));
+                    pTable[currentPeriodDisplay]->item(j + 2, 2)->setTextColor(QColor(textColor));
+                }
+            }
+            if(!isLessonNow[currentPeriodDisplay]){
+                numberNextLesson[currentPeriodDisplay] = -1;
+                for (int j = 0; j < numbersOfLessonInChange[currentPeriodDisplay]; ++j){
+                    if(pDoubleArray[currentPeriodDisplay][j].begin.startsWith(dash))
+                        continue;
+                    if(currentTimeInSec < pDoubleArray[currentPeriodDisplay][j].beginInSec){
+                        numberNextLesson[currentPeriodDisplay] = j;
+                        break;
+                    }
+                }
+            }
+            if(numberNextLesson[currentPeriodDisplay] == -1){
+                for (int j = 0; j < numbersOfLessonInChange[currentPeriodDisplay]; ++j) {
+                    if(pDoubleArray[currentPeriodDisplay][j].begin.startsWith(dash))
+                        continue;
+                    numberNextLesson[currentPeriodDisplay] = j;
                     break;
                 }
             }
         }
-        if(numberNextLesson == -1){
-            for (int i = 0; i < numbersOfLessonInChange[0]; ++i) {
-                if(pDoubleArray[0][i].begin.startsWith(dash))
-                    continue;
-                numberNextLesson = i;
-                break;
-            }
-        }
+}
+void BellsMonitor::slotDisplayPeriod()
+{
+    if(currentPeriodDisplay == 0){
+        currentPeriodDisplay = 1;
+        pTable[0]->hide();
+        pTable[1]->show();
+    }
+    else if(currentPeriodDisplay == 1){
+        currentPeriodDisplay = 0;
+        pTable[1]->hide();
+        pTable[0]->show();
     }
 }
 QString BellsMonitor::restTime(int timeInSec, int currentTime)
@@ -370,21 +446,16 @@ QString BellsMonitor::restTime(int timeInSec, int currentTime)
 
     return QString::number(M) + " мин. " + QString::number(S) + " сек.";
 }
-void BellsMonitor::zebra()
+void BellsMonitor::zebra(short unsigned int numberOfTable)
 {
-    for (int i = 0; i < numbersOfLessonInChange[0]; i += 2) {
-        pTable->item(i + 1, 0)->setBackgroundColor(SelectBackgroundColor);
-        pTable->item(i + 1, 1)->setBackgroundColor(SelectBackgroundColor);
-        pTable->item(i + 1, 2)->setBackgroundColor(SelectBackgroundColor);
+    for (int j = 0; j < numbersOfLessonInChange[numberOfTable]; j += 2) {
+        pTable[numberOfTable]->item(j + 2, 0)->setBackgroundColor(SelectBackgroundColor);
+        pTable[numberOfTable]->item(j + 2, 1)->setBackgroundColor(SelectBackgroundColor);
+        pTable[numberOfTable]->item(j + 2, 2)->setBackgroundColor(SelectBackgroundColor);
     }
 }
 void BellsMonitor::readSettings()
 {
-    server_ip       = settings.value("settings/server_ip",   "localhost").toString();
-    server_port     = settings.value("settings/server_port", 8083).toInt();
-    textSize        = settings.value("settings/textSize",    48).toString();
-    fullScreen      = settings.value("settings/fullScreen",  false).toBool();
-
     QFile fileSettings(settings.fileName());
 
     if( !(fileSettings.exists()) ){
@@ -392,5 +463,12 @@ void BellsMonitor::readSettings()
         settings.setValue("settings/server_port",  8083);
         settings.setValue("settings/textSize",     48);
         settings.setValue("settings/fullScreen",   false);
+        settings.setValue("settings/tableChangeTimer",   15000);
     }
+        server_ip       = settings.value("settings/server_ip",   "localhost").toString();
+        server_port     = settings.value("settings/server_port", 8083).toInt();
+        textSize        = settings.value("settings/textSize",    48).toString();
+        fullScreen      = settings.value("settings/fullScreen",  false).toBool();
+        tableChangeTimer= settings.value("settings/tableChangeTimer",  15000).toInt();
+    fileSettings.close();
 }
