@@ -38,17 +38,13 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
     pLayout = new QVBoxLayout;
     pLayout->setMargin(10);
 
-//create table
-//    createTables(0,0);
-//    createTables(0,1);
-
     this->setStyleSheet("background-color:" + QString(backgroundColor) + "; \
                                  color: " + textColor +"; \
                                 font-size: " + textSize + "px; \
                                 gridline-color: black;");
     this->setLayout(pLayout);
 
-
+    this->setCursor(QCursor(Qt::BlankCursor));
 //Full Screen
     if( settings.value("settings/fullScreen").toBool() ){
         this->showFullScreen();
@@ -102,7 +98,8 @@ void BellsMonitor::createTable(int numbersOfLessons, short unsigned int numberOf
     pTable[numberOfTable]->setStyleSheet("background-image: url(:/img/lyceum.png); \
                               background-repeat: repeat-xy; \
                               background-position: center; \
-                              background-origin: content; background-attachment: scroll;");
+                              background-origin: content; background-attachment: scroll; \
+                              font-size: " + textSize + "px;");
 
 // ############################################################################################
 //creating tables
@@ -147,7 +144,7 @@ void BellsMonitor::createTable(int numbersOfLessons, short unsigned int numberOf
     pTable[numberOfTable]->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     pTable[numberOfTable]->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     pTable[numberOfTable]->setEditTriggers(0);
-    pTable[numberOfTable]->setSelectionBehavior(QAbstractItemView::SelectRows);
+    pTable[numberOfTable]->setSelectionMode(QAbstractItemView::NoSelection);
 
     pTable[numberOfTable]->item(1, 0)->setBackgroundColor(headerBackgroundColor);
     pTable[numberOfTable]->item(1, 1)->setBackgroundColor(headerBackgroundColor);
@@ -266,6 +263,7 @@ void BellsMonitor::slotReadyRead()
         connect(&timerCurrentPeriodDisplay,  SIGNAL(timeout()), this, SLOT(slotDisplayPeriod()) );
         timerCurrentPeriodDisplay.start(tableChangeTimer);
     }
+
 }
 void BellsMonitor::slotError(QAbstractSocket::SocketError err)
 {
@@ -364,6 +362,16 @@ void BellsMonitor::slotSetCurrentTime()
     }
 
     clockSetText();
+
+    while( pTable[currentPeriodDisplay]->verticalScrollBar()->isVisible() && textSizeBuffer[currentPeriodDisplay] > minTextSize) {
+        --textSizeBuffer[currentPeriodDisplay];
+        pTable[currentPeriodDisplay]->setStyleSheet("background-image: url(:/img/lyceum.png); \
+                                                    background-repeat: repeat-xy; \
+                                                    background-position: center; \
+                                                    background-origin: content; background-attachment: scroll; \
+                                                    font-size: " + QString::number(textSizeBuffer[currentPeriodDisplay]) + "px;");
+    }
+    pTable[currentPeriodDisplay]->clearFocus();
 }
 void BellsMonitor::selectCurrentLesson(int currentTimeInSec)
 {
@@ -462,13 +470,19 @@ void BellsMonitor::readSettings()
         settings.setValue("settings/server_ip",   "localhost");
         settings.setValue("settings/server_port",  8083);
         settings.setValue("settings/textSize",     48);
+        settings.setValue("settings/minTextSize",   10);
         settings.setValue("settings/fullScreen",   false);
         settings.setValue("settings/tableChangeTimer",   15000);
     }
         server_ip       = settings.value("settings/server_ip",   "localhost").toString();
         server_port     = settings.value("settings/server_port", 8083).toInt();
         textSize        = settings.value("settings/textSize",    48).toString();
+        minTextSize     = settings.value("settings/minTextSize",  10).toInt();
         fullScreen      = settings.value("settings/fullScreen",  false).toBool();
         tableChangeTimer= settings.value("settings/tableChangeTimer",  15000).toInt();
+
     fileSettings.close();
+
+    textSizeBuffer[0] = textSize.toInt();
+    textSizeBuffer[1] = textSize.toInt();
 }

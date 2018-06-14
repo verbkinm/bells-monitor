@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QTimer>
 #include <QSettings>
+#include <QScrollBar>
 
 class BellsMonitor;
 
@@ -28,6 +29,8 @@ private:
     QSettings                   settings;
 //Settings value
     QString                     server_ip, textSize;
+    int                         textSizeBuffer[2];
+    int                         minTextSize;
     int                         server_port;
     bool                        fullScreen;
     int                         tableChangeTimer;
