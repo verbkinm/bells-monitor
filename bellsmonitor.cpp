@@ -5,6 +5,10 @@
 #include <QPixmap>
 #include <QFile>
 #include <QFont>
+<<<<<<< HEAD
+=======
+#include "../myWidgets/fingerslide/fingerslide.h"
+>>>>>>> 9c0a744e1569632f0a383c772fa7dc94c55c5f5f
 
 #define textColor               "#000000"
 #define backgroundColor         "#ffffff"
@@ -32,6 +36,7 @@ BellsMonitor::BellsMonitor(QWidget *parent) :
     connect(m_pTcpSocket,       SIGNAL(connected()), SLOT(slotConnected()));
     connect(m_pTcpSocket,       SIGNAL(readyRead()), SLOT(slotReadyRead()));
     connect(m_pTcpSocket,       SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(slotError(QAbstractSocket::SocketError)) );
+//    connect(m_pTcpSocket,       SIGNAL(stateChanged(QAbstractSocket::SocketState)), this, SLOT(slotStateChanged(QAbstractSocket::SocketState)) );
 
     connect(&timerWait,         SIGNAL(timeout()), this, SLOT(slotTryReconnect())   );
     connect(&timerCurrentTime,  SIGNAL(timeout()), this, SLOT(slotSetCurrentTime()) );
@@ -62,6 +67,7 @@ void BellsMonitor::createClock(void)
     clockSetText();
 
     clock.setAlignment(Qt::AlignCenter);
+//    clock.setStyleSheet("font: bold 48px;");
     timerCurrentTime.start(200);
 
  //Отображения смен по очедери
@@ -99,6 +105,12 @@ void BellsMonitor::createTable(int numbersOfLessons, short unsigned int numberOf
 
     pTable[numberOfTable] = new QTableWidget(rows,3);
     pTable[numberOfTable]->viewport()->setObjectName("Bells table #"+QString::number(numberOfTable));
+<<<<<<< HEAD
+=======
+
+    FingerSlide *eventFilterTable = new FingerSlide(pTable[numberOfTable]->viewport());
+    pTable[numberOfTable]->viewport()->installEventFilter(eventFilterTable);
+>>>>>>> 9c0a744e1569632f0a383c772fa7dc94c55c5f5f
 
     pTable[numberOfTable]->setStyleSheet("background-image: url(:/img/logo); \
                               background-repeat: repeat-xy; \
@@ -169,6 +181,7 @@ void BellsMonitor::createTable(int numbersOfLessons, short unsigned int numberOf
 }
 void BellsMonitor::clockSetText()
 {
+<<<<<<< HEAD
     if(showTime)
     {
         secondPartClock = secondPartClock + "<br>" \
@@ -179,6 +192,21 @@ void BellsMonitor::clockSetText()
                             + "<\b>";
     }
     clock.setText(firstPartClock + secondPartClock);
+=======
+    clock.setText(firstPartClock + secondPartClock);
+
+//                  + "<br>" \
+//                  + "<b>" \
+//                  + QTime::currentTime().toString("hh:mm:ss") \
+//                  + "   " \
+//                  + QDate::currentDate().toString("dd-MM-yyyy") \
+//                  + "<\b>" \
+//                  );
+}
+void BellsMonitor::slotStateChanged(QAbstractSocket::SocketState state)
+{
+    qDebug() << state;
+>>>>>>> 9c0a744e1569632f0a383c772fa7dc94c55c5f5f
 }
 void BellsMonitor::slotPingOut()
 {
@@ -190,6 +218,7 @@ void BellsMonitor::slotReadyRead()
     in.setVersion(QDataStream::Qt_5_3);
 
 
+<<<<<<< HEAD
     int typeData;
     in >> typeData;
     if(typeData == 1)
@@ -234,6 +263,53 @@ void BellsMonitor::slotReadyRead()
                     pDoubleArray[i][j].beginInSec = hourBegin * 3600 + minutBegin * 60;
                     pDoubleArray[i][j].endInSec = hourEnd * 3600 + minutEnd * 60;
 
+=======
+
+    int typeData;
+    in >> typeData;
+    qDebug() << "typeData - " << typeData;
+    if(typeData == 1)
+    {
+        timerPing.start(timerPingDuration);
+        return;
+    }
+    else if (typeData == 0){
+        isChangesEnabled[0] = false;
+        isChangesEnabled[1] = false;
+        timerCurrentPeriodDisplay.stop();
+
+        if(pDoubleArray != 0)
+            for (int i = 0; i < 2; ++i)
+                delete []pDoubleArray[i];
+
+        pDoubleArray = new lessonTime* [2];
+
+        for (int i = 0; i < 2; ++i) {
+            in >> isChangesEnabled[i] \
+               >> numbersOfLessonInChange[i];
+
+            pDoubleArray[i] = new lessonTime[numbersOfLessonInChange[i]];
+
+            for (int j = 0; j < numbersOfLessonInChange[i]; ++j){
+
+                in >> pDoubleArray[i][j].begin >> pDoubleArray[i][j].end;
+
+                QString begin   =  pDoubleArray[i][j].begin;
+                QString end     =  pDoubleArray[i][j].end;
+
+    //установка переменной nextLessonBeginInSec
+                if( !(begin.startsWith(dash)) ) {
+
+                    int hourBegin   = begin.split(":")[0].toInt();
+                    int minutBegin  = begin.split(":")[1].toInt();
+
+                    int hourEnd     = end.split(":")[0].toInt();
+                    int minutEnd    = end.split(":")[1].toInt();
+
+                    pDoubleArray[i][j].beginInSec = hourBegin * 3600 + minutBegin * 60;
+                    pDoubleArray[i][j].endInSec = hourEnd * 3600 + minutEnd * 60;
+
+>>>>>>> 9c0a744e1569632f0a383c772fa7dc94c55c5f5f
                     if( j > 0 ){
                             for (int ii = j-1; ii >= 0; --ii) {
                                 if(pDoubleArray[i][ii].begin.startsWith(dash))
@@ -291,12 +367,15 @@ void BellsMonitor::slotReadyRead()
 
         timerPing.start(timerPingDuration);
     }
+<<<<<<< HEAD
     else
     {
         message.setText("Ошибка передачи данных");
         message.setAlignment(Qt::AlignCenter);
         pLayout->addWidget(&message);
     }
+=======
+>>>>>>> 9c0a744e1569632f0a383c772fa7dc94c55c5f5f
 }
 void BellsMonitor::slotError(QAbstractSocket::SocketError err)
 {
@@ -323,6 +402,10 @@ void BellsMonitor::slotError(QAbstractSocket::SocketError err)
     timerCurrentPeriodDisplay.stop();
     timerCurrentTime.stop();
     clock.clear();
+<<<<<<< HEAD
+=======
+//    qDebug() << "slotError";
+>>>>>>> 9c0a744e1569632f0a383c772fa7dc94c55c5f5f
 }
 void BellsMonitor::slotConnected()
 {
@@ -353,11 +436,17 @@ void BellsMonitor::deleteTable(short unsigned int numberOfTable)
 }
 void BellsMonitor::slotTryReconnect()
 {
+//    qDebug() << "slot reconnect";
     timerWait.stop();
     m_pTcpSocket->connectToHost(server_ip, server_port);
 }
 void BellsMonitor::slotSetCurrentTime()
 {
+<<<<<<< HEAD
+=======
+//    qDebug() << "state - " << m_pTcpSocket->state();
+
+>>>>>>> 9c0a744e1569632f0a383c772fa7dc94c55c5f5f
     if(currentPeriodDisplay < 0)
         return;
 

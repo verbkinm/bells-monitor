@@ -107,6 +107,10 @@ private slots:
     void slotConnected                      ();
 
     void slotTryReconnect                   (void);
+<<<<<<< HEAD
+=======
+    void slotStateChanged                   (QAbstractSocket::SocketState);
+>>>>>>> 9c0a744e1569632f0a383c772fa7dc94c55c5f5f
     void slotSetCurrentTime                 (void);
     void slotDisplayPeriod                  (void);
     void slotPingOut                        (void);
