@@ -39,7 +39,7 @@ private:
     QTcpSocket*                 m_pTcpSocket;
     quint16                     m_nNextBlockSize;
 
-    QTimer                      timerWait, timerCurrentTime, timerCurrentPeriodDisplay;
+    QTimer                      timerWait, timerCurrentTime, timerCurrentPeriodDisplay, timerPing;
     QLabel                      message, clock;
 
     bool                        isConnected = false;
@@ -74,7 +74,7 @@ private:
 //****************************************************************************
 // contents protocol
 //
-// in >> размер данных(quint16)
+// in >> размер данных(quint16) >> тип передаваемых данных ( int  0 - send data, 1 - ping)
 //    for (int i = 0; i < 2; ++i){
 //      in >> состояние смены(bool) >> кол-во уроков в смене(int)
 //      for (int j = 0; j < кол-во уроков в смене[i]; ++j)
@@ -102,12 +102,14 @@ private slots:
     void slotReadyRead                      (void);
     void slotError                          (QAbstractSocket::SocketError);
 //    void slotSendToServer                   (void);
-    void slotConnected                      (void);
+    void slotConnected                      ();
 
     void slotTryReconnect                   (void);
-
+    void slotStateChanged                   (QAbstractSocket::SocketState);
     void slotSetCurrentTime                 (void);
     void slotDisplayPeriod                  (void);
+    void slotPingOut                        (void);
+
 };
 
 #endif // BELLSMONITOR_H
