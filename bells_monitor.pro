@@ -25,7 +25,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        bellsmonitor.cpp
+        bellsmonitor.cpp \
 
 HEADERS += \
         bellsmonitor.h
