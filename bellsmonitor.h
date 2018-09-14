@@ -86,6 +86,7 @@ private:
 
     bool isChangesEnabled[2] = { false, false };
 
+
     struct lessonTime
     {
         QString begin                   = 0;
