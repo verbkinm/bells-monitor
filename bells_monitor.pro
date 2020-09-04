@@ -24,11 +24,15 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += \
+    bells_monitor_settings.cpp \
+    log.cpp \
         main.cpp \
         bellsmonitor.cpp \
 
 HEADERS += \
-        bellsmonitor.h
+        bells_monitor_settings.h \
+        bellsmonitor.h \
+        log.h
 
 RESOURCES += \
     img.qrc

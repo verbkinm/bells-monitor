@@ -1,7 +1,6 @@
 #ifndef BELLSMONITOR_H
 #define BELLSMONITOR_H
 
-#include <QWidget>
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QVBoxLayout>
@@ -9,38 +8,28 @@
 #include <QTcpSocket>
 #include <QLabel>
 #include <QTimer>
-#include <QSettings>
-#include <QScrollBar>
 
-class BellsMonitor;
+#include "bells_monitor_settings.h"
+#include "log.h"
 
 class BellsMonitor : public QWidget
 {
     Q_OBJECT
 
 public:
-    BellsMonitor(QWidget *parent = 0);
+    BellsMonitor(QWidget *parent = nullptr);
     ~BellsMonitor();
 
     QVBoxLayout*                pLayout;
     QTableWidget                *pTable[2]; //таблицы для смен
 
 private:
-    QSettings                   settings;
-    bool                        showTime;
-//Settings value
-    QString                     server_ip, textSize;
-    int                         textSizeBuffer[2];
-    int                         minTextSize;
-    int                         server_port;
-    bool                        fullScreen;
-    int                         tableChangeTimer;
-//Settings value
+    Bells_monitor_settings _settings;
 
     QTcpSocket*                 m_pTcpSocket;
     quint16                     m_nNextBlockSize;
 
-    QTimer                      timerWait, timerCurrentTime, timerCurrentPeriodDisplay, timerPing;
+    QTimer                      timerWait, timerCurrentTime, timerCurrentPeriodDisplay;
     QLabel                      message, clock;
 
     bool                        isConnected = false;
@@ -56,21 +45,19 @@ private:
     QString                     textColor, backgroundColor;
     QString                     SelectTextColor, SelectBackgroundColor;
 
-    void clockSetText           (void);
-    void createTable            (int numbersOfLessons, short unsigned int numberOfTable);
-    void errorServerConnection  (void);
-    void clear                  (void);
-    void deleteTable            (short unsigned int numberOfTable);
+    void clockSetText(void);
+    void createTable(int numbersOfLessons, short unsigned int numberOfTable);
+    void errorServerConnection(void);
+    void clear(void);
+    void deleteTable(short unsigned int numberOfTable);
 
-    void createClock            (void);
+    void createClock(void);
 
-    void selectCurrentLesson    (int currentTimeInSec);
+    void selectCurrentLesson(int currentTimeInSec);
 
-    QString restTime            (int timeInSec, int currentTime);
+    QString restTime(int timeInSec, int currentTime);
 
-    void zebra                  (short unsigned int numberOfTable);
-
-    void readSettings           (void);
+    void zebra(short unsigned int numberOfTable);
 
 //****************************************************************************
 // contents protocol
@@ -83,7 +70,7 @@ private:
 //
 //****************************************************************************
 
-    unsigned short numbersOfLessonInChange[2] = { 0, 0 };
+    int numbersOfLessonInChange[2] = { 0, 0 };
 
     bool isChangesEnabled[2] = { false, false };
 
@@ -101,6 +88,7 @@ private:
     lessonTime**                pDoubleArray = 0;
 
 private slots:
+
     void slotReadyRead                      (void);
     void slotError                          (QAbstractSocket::SocketError);
 //    void slotSendToServer                   (void);
@@ -109,8 +97,6 @@ private slots:
     void slotTryReconnect                   (void);
     void slotSetCurrentTime                 (void);
     void slotDisplayPeriod                  (void);
-    void slotPingOut                        (void);
-
 };
 
 #endif // BELLSMONITOR_H
